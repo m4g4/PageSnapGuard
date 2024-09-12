@@ -7,30 +7,37 @@ import { ViewPortType } from '../types.js';
 
 export async function takeScreenshot(page: Page, fileName: string, viewPort: ViewPortType): Promise<number> {
 
-    const viewportHeight = 840;
-    await page.setViewport({ width: 1280, height: viewportHeight });
+    await page.setViewport({ width: viewPort.width, height: viewPort.height });
+
+    await page.evaluate(() => {
+        const style = document.createElement('style');
+        style.innerHTML = `
+          * {
+              animation: none !important;
+              transition: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+    });
   
-    // Get the total height of the page
     const totalHeight = await page.evaluate(() => document.body.scrollHeight);
   
     let scrollPosition = 0;
     let screenshotIndex = 0;
   
     while (scrollPosition < totalHeight) {
-      const path = `${fileName}-${screenshotIndex}.png`;
+        const path = `${fileName}-${screenshotIndex}.png`;
       
-      await page.screenshot({ path });
-  
-      // Scroll the page by the viewport height
-      scrollPosition += viewportHeight;
+        await waitForTimeout(500);
+        await page.screenshot({ path });
+        
+        scrollPosition += viewPort.height;
 
-      await page.evaluate((scrollPosition) => {
-        window.scrollTo(0, scrollPosition);
-      }, scrollPosition);
+        await page.evaluate((scrollPosition) => {
+            window.scrollTo(0, scrollPosition);
+        }, scrollPosition);
   
-      await waitForTimeout(500);
-  
-      screenshotIndex++;
+        screenshotIndex++;
     }  
 
     return screenshotIndex;
