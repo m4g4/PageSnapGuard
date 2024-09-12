@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+      "target": "ES2020",
+      "module": "ESNext",
+      "moduleResolution": "node", 
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "typeRoots": ["./node_modules/@types/**/", "./src/types"],
+      "rootDir": "./src",  // This is where compiled JS files will go
+      "outDir": "./dist"  // This is where compiled JS files will go
+    },
+    "include": ["src/**/*.ts"],  // Only compile TypeScript files in the src folder
+    "exclude": ["node_modules"]
+  }

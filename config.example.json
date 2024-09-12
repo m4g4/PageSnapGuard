@@ -1,0 +1,19 @@
+// An example of configuration.
+// Comments need to be removed to make this json valid.
+{
+    "headless": true,                          // Toggle to run the test headless (without displaying the browser window)
+    "baseUrl": "https://www.wordpress.org/",   // Base URL of the website to be tested
+    "globalSelector": ".page",                 // CSS selector to target the main container for screenshots
+    "screenshotDir": "./screenshots/current/", // Directory to store the current screenshots
+    "baselineDir": "./screenshots/baseline/",  // Directory containing baseline (reference) screenshots
+    "diffDir": "./screenshots/diffs/",         // Directory to store the diff images (highlighting differences)
+    "diffTresholdPct": 1,                      // Percentage threshold of allowed differences before marking as failed
+    "viewPort": { 
+        "width": 1280,                         // Width of the browser viewport (for consistent screenshot size)
+        "height": 840                          // Height of the browser viewport
+    },
+    "staticPages": [
+        "",              // Path for the homepage (relative to baseUrl)
+        "news"           // Path for the news page (relative to baseUrl)
+    ]
+}
