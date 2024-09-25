@@ -1,12 +1,10 @@
-import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 
-import { all } from './batches/all.js';
 import { getConfig, setConfig } from './config.js';
-import { runBatches } from './batchRunner.js';
+import { processPages } from './pageProcessor.js';
 import { ConfigType } from './types.js';
 import { prepareOutputDir, removeDirFiles } from './utils.js';
 
@@ -48,18 +46,16 @@ function prepareOutputDirectories() {
         return;
     }
 
-    const browser = await puppeteer.launch({ headless: getConfig().headless });
-    const page = await browser.newPage();
+    console.error('PageSnapGuard started...');
 
     prepareOutputDirectories();
 
     try {
-        await runBatches(page, all);
-        console.log('Finished!');
+        await Promise.all(processPages());
+
+        console.log('PageSnapGuard finished succesfully!');
 
     } catch (error) {
-        console.error("Error during automation:", error);
-    } finally {
-        await browser.close();
+        console.error("PageSnapGuard error:", error);
     }
 })();

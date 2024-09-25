@@ -4,7 +4,9 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "start": "npx tsc && node dist/index.js --config config.json"
+    "build": "npx tsc",
+    "test": "echo 'No tests yet'",
+    "capture": "node dist/index.js --config config.json"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +17,7 @@
     "pixelmatch": "^6.0.0",
     "pngjs": "^7.0.0",
     "puppeteer": "^23.3.0",
+    "sharp": "^0.33.5",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
