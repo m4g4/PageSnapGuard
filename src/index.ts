@@ -4,7 +4,7 @@ import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 
 import { getConfig, setConfig } from './config.js';
-import { processPages } from './pageProcessor.js';
+import { closeBrowsers, processPages } from './pageProcessor.js';
 import { ConfigType } from './types.js';
 import { prepareOutputDir, removeDirFiles } from './utils.js';
 
@@ -52,6 +52,8 @@ function prepareOutputDirectories() {
 
     try {
         await Promise.all(processPages());
+
+        closeBrowsers();
 
         console.log('PageSnapGuard finished succesfully!');
 

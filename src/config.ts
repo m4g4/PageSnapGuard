@@ -14,8 +14,13 @@ export function getConfig(): ConfigType {
     return config;
 }
 
+const defaultConfig: Partial<ConfigType> = ({
+    browserPoolCount: 3
+})
+
 export function prepareConfig(cfg: ConfigType): ConfigType {
     return {
+        ...defaultConfig,
         ...cfg,
         baselineDir: path.resolve(cfg.baselineDir),
         screenshotDir: path.resolve(cfg.screenshotDir),

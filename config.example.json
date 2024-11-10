@@ -6,6 +6,7 @@
     "baselineDir": "./screenshots/baseline/",
     "diffDir": "./screenshots/diffs/",
     "diffTresholdPct": 1,
+    "browserPoolCount": 3,
     "viewPort": { "width": 1280, "height": 840 },
     "pages": [
       {

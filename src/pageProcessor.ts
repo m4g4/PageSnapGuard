@@ -5,6 +5,39 @@ import { ClickActionValueType, DynamicPageConfigType, isUrlPathType, PageConfigu
 import { getConfig } from './config.js';
 import { url } from './utils/url.js';
 
+let launchedBrowserCount: number = 0;
+const browserPool: Array<Browser> = [];
+const waitingQueue: Array<{ resolve: (browser: Browser) => void }> = [];
+
+export const getBrowser = async () => {
+    console.log({launchedBrowserCount}, 'getConfig().browserPoolCount', getConfig().browserPoolCount);
+    if (launchedBrowserCount < getConfig().browserPoolCount) {
+        launchedBrowserCount++;
+        return await puppeteer.launch({ headless: getConfig().headless });
+    }
+
+    return new Promise<Browser>((resolve) => {
+        waitingQueue.push({
+            resolve: (browser: Browser) => resolve(browser),
+        });
+    });
+}
+
+export const returnBrowserToPool = (browser: Browser) => {
+    if (waitingQueue.length > 0) {
+        const nextTask = waitingQueue.shift();
+        if (nextTask) nextTask.resolve(browser);
+    }
+
+    browserPool.push(browser);
+}
+
+export const closeBrowsers = () => {
+    if (browserPool.length !== launchedBrowserCount)
+        throw new Error('Cannot close working browsers!');
+
+    browserPool.forEach(b => b.close());
+} 
 
 export const processPages = (): Promise<void>[] => {
     const pageConfig = getConfig().pages;
@@ -24,7 +57,7 @@ export const processPages = (): Promise<void>[] => {
 }
 
 export const processUrlPathPage = async (pageConfig: UrlPathType) => {
-    const browser = await puppeteer.launch({ headless: getConfig().headless });
+    const browser = await getBrowser();
 
     try {
         const page = await browser.newPage();
@@ -35,12 +68,12 @@ export const processUrlPathPage = async (pageConfig: UrlPathType) => {
         await processScreenshot(page, pageConfig);
 
     } finally {
-        await browser.close();
+        returnBrowserToPool(browser);
     }
 }
 
 export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
-    const browser = await puppeteer.launch({ headless: getConfig().headless });
+    const browser = await getBrowser();
     
     try {
         const page = await browser.newPage();
@@ -77,7 +110,7 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
             }
         }
     } finally {
-        await browser.close();
+        returnBrowserToPool(browser);
     }
 }
     

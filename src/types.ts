@@ -11,7 +11,8 @@ export type ConfigType = {
     diffDir: string,
     diffTresholdPct: number,
     pages: PageConfigurationType[],
-    viewPort: ViewPortType
+    viewPort: ViewPortType,
+    browserPoolCount: number
 }
 
 export type TakeScreenshotFunction = (page: Page, filePath: string) => Promise<void>
