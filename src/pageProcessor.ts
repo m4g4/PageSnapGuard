@@ -116,9 +116,10 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
     
 export const processScreenshot = async (page: Page, fileName: string) => {
 
-    const takeScreenshotPathName: string = getConfig().screenshotDir+'/'+fileName;
-    const baselinePathName: string = getConfig().baselineDir+'/'+fileName;
-    const diffPathName = getConfig().diffDir+'/'+fileName;
+    const screenshotFileName = !!fileName ? fileName : 'root';
+    const takeScreenshotPathName: string = getConfig().screenshotDir+'/'+screenshotFileName;
+    const baselinePathName: string = getConfig().baselineDir+'/'+screenshotFileName;
+    const diffPathName = getConfig().diffDir+'/'+screenshotFileName;
 
     await takeScreenshot(page, takeScreenshotPathName, getConfig().viewPort);
 
@@ -135,6 +136,6 @@ export const processScreenshot = async (page: Page, fileName: string) => {
         const difference = compareScreenshots(takeScreenshotPath, baselinePath, diffPath);
 
         if (difference > getConfig().diffTresholdPct)
-            console.error(`Difference in ${fileName}: ${difference.toFixed(2)}%`);
+            console.error(`Difference in ${screenshotFileName}: ${difference.toFixed(2)}%`);
     }
 }
