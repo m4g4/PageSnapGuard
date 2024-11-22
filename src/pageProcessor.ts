@@ -10,7 +10,7 @@ const browserPool: Array<Browser> = [];
 const waitingQueue: Array<{ resolve: (browser: Browser) => void }> = [];
 
 export const getBrowser = async () => {
-    console.log({launchedBrowserCount}, 'getConfig().browserPoolCount', getConfig().browserPoolCount);
+    
     if (launchedBrowserCount < getConfig().browserPoolCount) {
         launchedBrowserCount++;
         return await puppeteer.launch({ headless: getConfig().headless });
