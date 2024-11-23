@@ -7,7 +7,7 @@ import { url } from './utils/url.js';
 
 let launchedBrowserCount: number = 0;
 const browserPool: Array<Browser> = [];
-const waitingQueue: Array<{ resolve: (browser: Browser) => void }> = [];
+const waitingQueue: Array<{ resolve: () => void }> = [];
 
 export const getBrowser = async () => {
     
@@ -18,23 +18,29 @@ export const getBrowser = async () => {
 
     return new Promise<Browser>((resolve) => {
         waitingQueue.push({
-            resolve: (browser: Browser) => resolve(browser),
+            resolve: () => {
+                const browser = browserPool.pop();
+                if (browser === undefined) {
+                    throw new Error('Error retrieving free browser!');
+                }
+                resolve(browser);
+            },
         });
     });
 }
 
 export const returnBrowserToPool = (browser: Browser) => {
+    browserPool.push(browser);
+    
     if (waitingQueue.length > 0) {
         const nextTask = waitingQueue.shift();
-        if (nextTask) nextTask.resolve(browser);
+        if (nextTask) nextTask.resolve();
     }
-
-    browserPool.push(browser);
 }
 
 export const closeBrowsers = () => {
     if (browserPool.length !== launchedBrowserCount)
-        throw new Error('Cannot close working browsers!');
+        throw new Error(`Cannot close working browsers! Free browser count: ${browserPool.length}, Launched browser count: ${launchedBrowserCount}`);
 
     browserPool.forEach(b => b.close());
 } 
@@ -57,7 +63,10 @@ export const processPages = (): Promise<void>[] => {
 }
 
 export const processUrlPathPage = async (pageConfig: UrlPathType) => {
+    console.log('processing ' + pageConfig);
     const browser = await getBrowser();
+
+    console.log('got browser');
 
     try {
         const page = await browser.newPage();

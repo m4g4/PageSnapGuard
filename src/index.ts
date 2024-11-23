@@ -46,7 +46,7 @@ function prepareOutputDirectories() {
         return;
     }
 
-    console.error('PageSnapGuard started...');
+    console.info('PageSnapGuard started...');
 
     prepareOutputDirectories();
 
@@ -55,7 +55,7 @@ function prepareOutputDirectories() {
 
         closeBrowsers();
 
-        console.log('PageSnapGuard finished succesfully!');
+        console.info('PageSnapGuard finished succesfully!');
 
     } catch (error) {
         console.error("PageSnapGuard error:", error);
