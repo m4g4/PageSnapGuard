@@ -63,10 +63,7 @@ export const processPages = (): Promise<void>[] => {
 }
 
 export const processUrlPathPage = async (pageConfig: UrlPathType) => {
-    console.log('processing ' + pageConfig);
     const browser = await getBrowser();
-
-    console.log('got browser');
 
     try {
         const page = await browser.newPage();
