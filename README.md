@@ -45,6 +45,12 @@ After you have Node.js and npm installed, follow these steps to set up **PageSna
     npm install
     ```
 
+4. **Building PageSnapGuard**:
+    - Compile and prepare the project for use:
+    ```bash
+    npm run build
+    ```
+
 4. **Running PageSnapGuard**:
     ```bash
     npm run capture
