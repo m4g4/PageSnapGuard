@@ -30,6 +30,7 @@ export function isUrlPathType(config: PageConfigurationType): config is UrlPathT
     return typeof config === 'string';
 }
 
+export type TimeMillisValueType = number;
 export type ScreenshotIdType = string;
 export type CssSelectorType = string;
 
@@ -41,9 +42,17 @@ export type ActionType = {
 export type ActionNameType = 'click' | 'wait' | 'type' | 'screenshot';
 
 export type ClickActionValueType = CssSelectorType;
-export type WaitActionValueType = CssSelectorType;
+export type WaitActionValueType = CssSelectorType | TimeMillisValueType;
 export type ScreenshotActionValueType = ScreenshotIdType; 
 export type TypeActionValueType = {
     selector: string,
     what: string
 };
+
+export function isTimeWait(value: WaitActionValueType): value is TimeMillisValueType {
+    return typeof value === 'number';
+}
+
+export function isSelectorWait(value: WaitActionValueType): value is CssSelectorType {
+    return typeof value === 'string';
+}

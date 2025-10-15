@@ -1,6 +1,7 @@
 # Custom
 config.json
 screenshots
+launch.json
 .DS_Store
 
 # Logs

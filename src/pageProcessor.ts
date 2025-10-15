@@ -1,9 +1,10 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import fs from 'fs';
 import { compareScreenshots, takeScreenshot } from './utils/screenshot.js';
-import { ClickActionValueType, DynamicPageConfigType, isUrlPathType, PageConfigurationType, ScreenshotActionValueType, TypeActionValueType, UrlPathType, WaitActionValueType } from './types.js';
+import { ClickActionValueType, CssSelectorType, DynamicPageConfigType, isSelectorWait, isTimeWait, isUrlPathType, PageConfigurationType, ScreenshotActionValueType, TimeMillisValueType, TypeActionValueType, UrlPathType, WaitActionValueType } from './types.js';
 import { getConfig } from './config.js';
 import { url } from './utils/url.js';
+import { waitForTimeout } from './utils/utils.js';
 
 let launchedBrowserCount: number = 0;
 const browserPool: Array<Browser> = [];
@@ -95,8 +96,14 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
                     break;
 
                 case 'wait':
-                    await page.waitForSelector(action.value as WaitActionValueType);
-                    console.debug(`Waited for element: ${action.value}`);
+                    const value = action.value;
+                    if (isTimeWait(value as WaitActionValueType)) {
+                        await waitForTimeout(value as TimeMillisValueType);
+                        console.debug(`Waited ${value}ms`);
+                    } else if (isSelectorWait(value as WaitActionValueType)) {
+                        await page.waitForSelector(value as CssSelectorType, { timeout: 10000 });
+                        console.debug(`Waited for element: ${value}`);
+                    }
                     break;
 
                 case 'type':

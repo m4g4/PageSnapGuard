@@ -6,7 +6,7 @@ import { hideBin } from 'yargs/helpers';
 import { getConfig, setConfig } from './config.js';
 import { closeBrowsers, processPages } from './pageProcessor.js';
 import { ConfigType } from './types.js';
-import { prepareOutputDir, removeDirFiles } from './utils.js';
+import { prepareOutputDir, removeDirFiles } from './utils/utils.js';
 
 function loadConfig(filePath: string): ConfigType {
     const configFilePath = path.resolve(filePath);

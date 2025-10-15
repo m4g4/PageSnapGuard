@@ -3,23 +3,14 @@ import fs from 'fs';
 import { Page } from 'puppeteer';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
-import { waitForTimeout } from './utils.js';
+import { waitForAnimationsToEnd, waitForTimeout } from './utils.js';
 import { ViewPortType } from '../types.js';
 
 export async function takeScreenshot(page: Page, fileName: string, viewPort: ViewPortType): Promise<void> {
     
     await page.setViewport({ width: viewPort.width, height: viewPort.height });
     
-    await page.evaluate(() => {
-        const style = document.createElement('style');
-        style.innerHTML = `
-          * {
-              animation: none !important;
-              transition: none !important;
-          }
-      `;
-        document.head.appendChild(style);
-    });
+    await waitForAnimationsToEnd(page);
     
     const totalHeight = await page.evaluate(() => document.body.scrollHeight);
     
