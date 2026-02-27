@@ -27,15 +27,17 @@ function isAssetOrFilePath(pagePath: string): boolean {
 }
 
 export async function removeDirFiles(dirPath: string) {
-    fs.readdir(dirPath, (err, files) => {
-        if (err) throw err;
-      
-        for (const file of files) {
-            fs.unlink(path.join(dirPath, file), (err) => {
-                if (err) throw err;
-            });
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const entryPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+            fs.rmSync(entryPath, { recursive: true, force: true });
+            continue;
         }
-    });
+
+        fs.unlinkSync(entryPath);
+    }
 }
 
 export function prepareOutputDir(dirPath: string) {
