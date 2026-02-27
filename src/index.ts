@@ -8,6 +8,16 @@ import { closeBrowsers, processPages, PageProcessResult, pruneStaleBaselineFiles
 import { ConfigType } from './types.js';
 import { prepareOutputDir, removeDirFiles } from './utils/utils.js';
 
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled promise rejection:', reason);
+    process.exitCode = 1;
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception:', error);
+    process.exitCode = 1;
+});
+
 function loadConfig(filePath: string): ConfigType {
     const configFilePath = path.resolve(filePath);
     if (!fs.existsSync(configFilePath)) {
@@ -56,6 +66,14 @@ function prepareOutputDirectories() {
     }
 
     console.info('PageSnapGuard started...');
+    console.info(`Config: ${path.resolve(argv.config)}`);
+    console.info(`Browser: ${getConfig().browser}, Headless: ${getConfig().headless}, Pages: ${getConfig().pages.length}, Update baseline: ${getConfig().updateBaseline}`);
+
+    if (getConfig().pages.length === 0) {
+        console.error('No pages configured. Add at least one entry to "pages" in the config file.');
+        process.exitCode = 1;
+        return;
+    }
 
     prepareOutputDirectories();
 
@@ -74,12 +92,14 @@ function prepareOutputDirectories() {
     }
 
     const failedPages = results.filter(r => !r.success);
+    const succeededPages = results.length - failedPages.length;
 
     if (failedPages.length > 0) {
         for (const failedPage of failedPages) {
             console.error(`Page failed: ${failedPage.pageUrl} - ${failedPage.error}`);
         }
 
+        console.info(`Page processing summary: success=${succeededPages}, failed=${failedPages.length}, total=${results.length}`);
         console.error(`PageSnapGuard finished with errors. Failed pages: ${failedPages.length}/${results.length}`);
         process.exitCode = 1;
         return;
@@ -89,5 +109,6 @@ function prepareOutputDirectories() {
         pruneStaleBaselineFiles();
     }
 
+    console.info(`Page processing summary: success=${succeededPages}, failed=${failedPages.length}, total=${results.length}`);
     console.info('PageSnapGuard finished succesfully!');
 })();
