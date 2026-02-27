@@ -91,6 +91,14 @@ function prepareOutputDirectories() {
 
     const failedPages = results.filter(r => !r.success);
     const succeededPages = results.length - failedPages.length;
+    console.info('Page results:');
+    for (const result of results) {
+        if (result.success) {
+            console.info(`- ${result.pageUrl}: success`);
+        } else {
+            console.info(`- ${result.pageUrl}: failed (${result.error})`);
+        }
+    }
 
     if (failedPages.length > 0) {
         for (const failedPage of failedPages) {

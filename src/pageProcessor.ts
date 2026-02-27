@@ -149,9 +149,11 @@ const processPageSafely = async (config: PageConfigurationType): Promise<PagePro
         }
 
         logVerbose(`Page finished: ${pageUrl}`);
+        console.info(`Page result: ${pageUrl} - success`);
         return { pageUrl, success: true };
     } catch (error) {
         logVerbose(`Page failed: ${pageUrl} - ${toErrorMessage(error)}`);
+        console.error(`Page result: ${pageUrl} - failed (${toErrorMessage(error)})`);
         return {
             pageUrl,
             success: false,
