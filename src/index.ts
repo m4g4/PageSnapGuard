@@ -36,10 +36,19 @@ function prepareOutputDirectories() {
         description: 'Path to configuration JSON file',
         type: 'string',
         demandOption: true,
+    }).option('update-baseline', {
+        alias: 'u',
+        description: 'Replace baseline screenshots with current screenshots',
+        type: 'boolean',
     }).parseSync();
 
     try {
-        setConfig(loadConfig(argv.config));
+        const loadedConfig = loadConfig(argv.config);
+
+        setConfig({
+            ...loadedConfig,
+            updateBaseline: argv.updateBaseline ?? loadedConfig.updateBaseline
+        });
     
     } catch (error) {
         console.error('Error loading config:', error);

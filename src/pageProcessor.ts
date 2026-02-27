@@ -140,6 +140,12 @@ export const processScreenshot = async (page: Page, fileName: string) => {
     const baselinePath: string = `${baselinePathName}.png`;
     const diffPath = `${diffPathName}.png`;
 
+    if (getConfig().updateBaseline) {
+        fs.copyFileSync(takeScreenshotPath, baselinePath);
+        console.debug(`Baseline updated: ${baselinePath}`);
+        return;
+    }
+
     if (!fs.existsSync(baselinePath)) {
         console.debug(`New screenshot: ${baselinePath}`);
         fs.copyFile(takeScreenshotPath, baselinePath, (err) => {

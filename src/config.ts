@@ -15,7 +15,8 @@ export function getConfig(): ConfigType {
 }
 
 const defaultConfig: Partial<ConfigType> = ({
-    browserPoolCount: 3
+    browserPoolCount: 3,
+    updateBaseline: false
 })
 
 export function prepareConfig(cfg: ConfigType): ConfigType {

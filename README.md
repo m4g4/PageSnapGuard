@@ -9,6 +9,7 @@ PageSnapGuard is a visual regression and integration testing tool designed to pr
 - **Scroll-Based Screenshotting**: Capture long or dynamic web pages by scrolling and taking multiple screenshots.
 - **Threshold-based Image Comparison**: Define a threshold to tolerate minor visual changes and avoid unnecessary test failures.
 - **Flexible Configuration**: Easily configure the base URL, page paths, screenshot directories, and more via a JSON configuration file.
+- **Baseline Update Mode**: Optionally overwrite baseline screenshots with newly captured screenshots.
 
 ## Technical Requirements
 
@@ -92,6 +93,7 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "screenshotDir": "./screenshots/current/",
   "baselineDir": "./screenshots/baseline/",
   "diffDir": "./screenshots/diffs/",
+  "updateBaseline": false,
   "diffTresholdPct": 1,
   "viewPort": { "width": 1280, "height": 840 },
   "pages": [
@@ -109,3 +111,8 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   ]
 }
 ```
+
+### Baseline Update
+
+- Set `"updateBaseline": true` in your config file to overwrite baseline images with current screenshots during a run.
+- You can also enable it from CLI with `--update-baseline` (or `-u`), which overrides the config value for that run only.

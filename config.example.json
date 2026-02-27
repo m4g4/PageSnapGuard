@@ -5,6 +5,7 @@
     "screenshotDir": "./screenshots/current/",
     "baselineDir": "./screenshots/baseline/",
     "diffDir": "./screenshots/diffs/",
+    "updateBaseline": false,
     "diffTresholdPct": 1,
     "browserPoolCount": 3,
     "viewPort": { "width": 1280, "height": 840 },

@@ -9,6 +9,7 @@ export type ConfigType = {
     screenshotDir: string,
     baselineDir: string,
     diffDir: string,
+    updateBaseline?: boolean,
     diffTresholdPct: number,
     pages: PageConfigurationType[],
     viewPort: ViewPortType,
