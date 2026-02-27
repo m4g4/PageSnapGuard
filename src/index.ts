@@ -46,6 +46,10 @@ function prepareOutputDirectories() {
         description: 'Path to configuration JSON file',
         type: 'string',
         demandOption: true,
+    }).option('verbose', {
+        alias: 'v',
+        description: 'Print detailed step-by-step logs',
+        type: 'boolean',
     }).option('update-baseline', {
         alias: 'u',
         description: 'Replace baseline screenshots with current screenshots',
@@ -57,6 +61,7 @@ function prepareOutputDirectories() {
 
         setConfig({
             ...loadedConfig,
+            verbose: argv.verbose ?? loadedConfig.verbose,
             updateBaseline: argv.updateBaseline ?? loadedConfig.updateBaseline
         });
     
@@ -67,7 +72,7 @@ function prepareOutputDirectories() {
 
     console.info('PageSnapGuard started...');
     console.info(`Config: ${path.resolve(argv.config)}`);
-    console.info(`Browser: ${getConfig().browser}, Headless: ${getConfig().headless}, Pages: ${getConfig().pages.length}, Update baseline: ${getConfig().updateBaseline}`);
+    console.info(`Browser: ${getConfig().browser}, Headless: ${getConfig().headless}, Pages: ${getConfig().pages.length}, Update baseline: ${getConfig().updateBaseline}, Verbose: ${getConfig().verbose}`);
 
     if (getConfig().pages.length === 0) {
         console.error('No pages configured. Add at least one entry to "pages" in the config file.');

@@ -2,6 +2,7 @@
     "browser": "chrome",
     "browserExecutablePath": "",
     "browserArgs": [],
+    "verbose": false,
     "headless": true,
     "baseUrl": "https://www.example.com",
     "globalSelector": ".main-content",

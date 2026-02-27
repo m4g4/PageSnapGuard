@@ -20,17 +20,58 @@ const browserPool: Array<Browser> = [];
 const waitingQueue: Array<{ resolve: () => void }> = [];
 const processedBaselineFiles = new Set<string>();
 
+const logVerbose = (message: string) => {
+    if (getConfig().verbose) {
+        console.info(`[verbose] ${message}`);
+    }
+}
+
+const resolveLaunchBrowser = (): 'chrome' | 'firefox' => {
+    const browser = getConfig().browser;
+
+    if (browser === 'firefox' || browser === 'firefox-esr') {
+        return 'firefox';
+    }
+
+    return 'chrome';
+}
+
+const resolveExecutablePath = (): string | undefined => {
+    if (getConfig().browserExecutablePath) {
+        return getConfig().browserExecutablePath;
+    }
+
+    if (getConfig().browser === 'firefox-esr') {
+        return '/usr/bin/firefox-esr';
+    }
+
+    return undefined;
+}
+
 export const getBrowser = async () => {
     
     if (launchedBrowserCount < getConfig().browserPoolCount) {
         launchedBrowserCount++;
-        return await puppeteer.launch({
-            browser: getConfig().browser,
-            executablePath: getConfig().browserExecutablePath,
-            args: getConfig().browserArgs,
-            headless: getConfig().headless
-        });
+
+        const browser = resolveLaunchBrowser();
+        const executablePath = resolveExecutablePath();
+        logVerbose(`Launching browser #${launchedBrowserCount}/${getConfig().browserPoolCount} (${browser})${executablePath ? ` with executable ${executablePath}` : ''}`);
+
+        try {
+            return await puppeteer.launch({
+                browser,
+                executablePath,
+                args: getConfig().browserArgs,
+                headless: getConfig().headless
+            });
+        } catch (error) {
+            launchedBrowserCount--;
+            logVerbose('Browser launch failed, releasing launch slot.');
+            throw error;
+        }
     }
+
+    logVerbose(`Browser pool exhausted (${getConfig().browserPoolCount}). Waiting for a free browser...`);
 
     return new Promise<Browser>((resolve) => {
         waitingQueue.push({
@@ -39,6 +80,7 @@ export const getBrowser = async () => {
                 if (browser === undefined) {
                     throw new Error('Error retrieving free browser!');
                 }
+                logVerbose('Reusing browser from pool.');
                 resolve(browser);
             },
         });
@@ -47,6 +89,7 @@ export const getBrowser = async () => {
 
 export const returnBrowserToPool = (browser: Browser) => {
     browserPool.push(browser);
+    logVerbose(`Browser returned to pool. Pool size: ${browserPool.length}`);
     
     if (waitingQueue.length > 0) {
         const nextTask = waitingQueue.shift();
@@ -58,6 +101,7 @@ export const closeBrowsers = () => {
     if (browserPool.length !== launchedBrowserCount)
         throw new Error(`Cannot close working browsers! Free browser count: ${browserPool.length}, Launched browser count: ${launchedBrowserCount}`);
 
+    logVerbose(`Closing ${browserPool.length} browser instance(s).`);
     browserPool.forEach(b => b.close());
 } 
 
@@ -79,6 +123,7 @@ const toErrorMessage = (error: unknown): string => {
 
 const processPageSafely = async (config: PageConfigurationType): Promise<PageProcessResult> => {
     const pageUrl = toPageUrl(config);
+    logVerbose(`Page started: ${pageUrl}`);
 
     try {
         if (isUrlPathType(config)) {
@@ -87,8 +132,10 @@ const processPageSafely = async (config: PageConfigurationType): Promise<PagePro
             await processDynamicPage(config);
         }
 
+        logVerbose(`Page finished: ${pageUrl}`);
         return { pageUrl, success: true };
     } catch (error) {
+        logVerbose(`Page failed: ${pageUrl} - ${toErrorMessage(error)}`);
         return {
             pageUrl,
             success: false,
@@ -99,6 +146,7 @@ const processPageSafely = async (config: PageConfigurationType): Promise<PagePro
 
 export const processPages = (): Promise<PageProcessResult>[] => {
     const pageConfig = getConfig().pages;
+    logVerbose(`Preparing ${pageConfig.length} page task(s).`);
 
     const pagePromises: Promise<PageProcessResult>[] = [];
     for (let i = 0; i < getConfig().pages.length; i++) {
@@ -142,7 +190,7 @@ export const pruneStaleBaselineFiles = () => {
         const relativePath = path.relative(baselineDir, filePath).split(path.sep).join('/');
         if (!processedBaselineFiles.has(relativePath)) {
             fs.unlinkSync(filePath);
-            console.debug(`Removed stale baseline: ${filePath}`);
+            console.info(`Removed stale baseline: ${filePath}`);
         }
     }
 }
@@ -152,10 +200,14 @@ export const processUrlPathPage = async (pageConfig: UrlPathType) => {
 
     try {
         const page = await browser.newPage();
+        const targetUrl = url(getConfig().baseUrl, pageConfig);
+        logVerbose(`Opening page: ${targetUrl}`);
 
-        await page.goto(url(getConfig().baseUrl, pageConfig), { waitUntil: 'networkidle0' });
+        await page.goto(targetUrl, { waitUntil: 'networkidle0' });
+        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}`);
         await page.waitForSelector(getConfig().globalSelector, { timeout: 5000 });
 
+        logVerbose(`Taking root screenshot for: ${pageConfig || 'root'}`);
         await processScreenshot(page, pageConfig);
 
     } finally {
@@ -168,38 +220,42 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
     
     try {
         const page = await browser.newPage();
+        const targetUrl = url(getConfig().baseUrl, pageConfig.path);
+        logVerbose(`Opening dynamic page: ${targetUrl}`);
 
-        await page.goto(url(getConfig().baseUrl, pageConfig.path), { waitUntil: 'networkidle0' });
+        await page.goto(targetUrl, { waitUntil: 'networkidle0' });
+        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}`);
         await page.waitForSelector(getConfig().globalSelector, { timeout: 5000 });
 
         for (const action of pageConfig.actions) {
+            logVerbose(`Action '${action.name}' on '${pageConfig.path}'`);
             switch (action.name) {
                 case 'click':
                     await page.click(action.value as ClickActionValueType);
-                    console.debug(`Clicked on element: ${action.value}`);
+                    logVerbose(`Clicked on element: ${action.value}`);
                     break;
 
                 case 'wait':
                     const value = action.value;
                     if (isTimeWait(value as WaitActionValueType)) {
                         await waitForTimeout(value as TimeMillisValueType);
-                        console.debug(`Waited ${value}ms`);
+                        logVerbose(`Waited ${value}ms`);
                     } else if (isSelectorWait(value as WaitActionValueType)) {
                         await page.waitForSelector(value as CssSelectorType, { timeout: 10000 });
-                        console.debug(`Waited for element: ${value}`);
+                        logVerbose(`Waited for element: ${value}`);
                     }
                     break;
 
                 case 'type':
                     const { selector, what } = action.value as TypeActionValueType;
                     await page.type(selector, what);
-                    console.debug(`Typed '${what}' into: ${selector}`);
+                    logVerbose(`Typed '${what}' into: ${selector}`);
                     break;
 
                 case 'screenshot':
                     const screenshotId = action.value as ScreenshotActionValueType;
                     await processScreenshot(page, `${pageConfig.path}_${screenshotId}`)
-                    console.debug(`Screenshot saved to: ${action.value}`);
+                    logVerbose(`Screenshot saved to: ${action.value}`);
                     break;
 
                 default:
@@ -224,18 +280,22 @@ export const processScreenshot = async (page: Page, fileName: string) => {
     const baselinePath: string = `${baselinePathName}.png`;
     const diffPath = `${diffPathName}.png`;
     processedBaselineFiles.add(`${screenshotFileName}.png`);
+    logVerbose(`Capturing screenshot: ${takeScreenshotPath}`);
 
     if (!fs.existsSync(baselinePath)) {
-        console.debug(`New screenshot: ${baselinePath}`);
+        logVerbose(`Baseline missing. Creating: ${baselinePath}`);
         fs.copyFileSync(takeScreenshotPath, baselinePath);
     } else {
+        logVerbose(`Comparing ${takeScreenshotPath} against baseline ${baselinePath}`);
         const difference = compareScreenshots(takeScreenshotPath, baselinePath, diffPath);
+        logVerbose(`Diff for ${screenshotFileName}: ${difference.toFixed(2)}%`);
 
         if (difference > getConfig().diffTresholdPct)
             console.error(`Difference in ${screenshotFileName}: ${difference.toFixed(2)}%`);
 
         if (getConfig().updateBaseline) {
             fs.copyFileSync(takeScreenshotPath, baselinePath);
+            console.info(`Baseline updated: ${baselinePath}`);
         }
     }
 }

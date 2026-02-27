@@ -57,6 +57,11 @@ After you have Node.js and npm installed, follow these steps to set up **PageSna
     npm run capture -- --config config.json
     ```
 
+   Enable detailed logs:
+    ```bash
+    npm run capture -- --config config.json --verbose
+    ```
+
    Run multiple configurations one after another:
     ```bash
     npm run capture -- --config config.site-a.json
@@ -96,6 +101,7 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "browser": "chrome",
   "browserExecutablePath": "",
   "browserArgs": [],
+  "verbose": false,
   "headless": true,
   "baseUrl": "https://www.example.com",
   "globalSelector": ".main-content",
@@ -123,12 +129,20 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 
 ### Browser Configuration
 
-- `"browser"`: `"chrome"` (default) or `"firefox"`.
-- `"browserExecutablePath"`: optional path to browser binary (for example `/usr/bin/firefox`).
+- `"browser"`: `"chrome"` (default), `"firefox"`, or `"firefox-esr"`.
+- `"browserExecutablePath"`: optional path to browser binary (for example `/usr/bin/firefox` or `/usr/bin/firefox-esr`).
 - `"browserArgs"`: optional launch arguments array passed to Puppeteer.
 - For `firefox`, use:
   - `"browser": "firefox"`
   - `"browserExecutablePath": "/usr/bin/firefox"`
+- For `firefox-esr`, use:
+  - `"browser": "firefox-esr"`
+  - `"browserExecutablePath": "/usr/bin/firefox-esr"` (optional, used by default when omitted)
+
+### Verbose Logging
+
+- Set `"verbose": true` in config, or pass `--verbose` / `-v` in CLI.
+- Verbose mode prints every processing step (page start/end, actions, comparisons, and baseline updates).
 
 ### Baseline Update
 

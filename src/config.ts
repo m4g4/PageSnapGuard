@@ -18,6 +18,7 @@ const defaultConfig: Partial<ConfigType> = ({
     browser: 'chrome',
     browserPoolCount: 3,
     updateBaseline: false,
+    verbose: false,
     browserArgs: []
 })
 
