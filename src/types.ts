@@ -1,8 +1,12 @@
 import { Page } from "puppeteer"
 
 export type ViewPortType = { width: number, height: number }
+export type BrowserType = 'chrome' | 'firefox';
 
 export type ConfigType = {
+    browser?: BrowserType,
+    browserExecutablePath?: string,
+    browserArgs?: string[],
     headless: boolean,
     baseUrl: string,
     globalSelector: string,

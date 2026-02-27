@@ -87,6 +87,9 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 
 ```json
 {
+  "browser": "chrome",
+  "browserExecutablePath": "",
+  "browserArgs": [],
   "headless": true,
   "baseUrl": "https://www.example.com",
   "globalSelector": ".main-content",
@@ -111,6 +114,15 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   ]
 }
 ```
+
+### Browser Configuration
+
+- `"browser"`: `"chrome"` (default) or `"firefox"`.
+- `"browserExecutablePath"`: optional path to browser binary (for example `/usr/bin/firefox`).
+- `"browserArgs"`: optional launch arguments array passed to Puppeteer.
+- For `firefox`, use:
+  - `"browser": "firefox"`
+  - `"browserExecutablePath": "/usr/bin/firefox"`
 
 ### Baseline Update
 

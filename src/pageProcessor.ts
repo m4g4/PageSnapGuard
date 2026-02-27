@@ -24,7 +24,12 @@ export const getBrowser = async () => {
     
     if (launchedBrowserCount < getConfig().browserPoolCount) {
         launchedBrowserCount++;
-        return await puppeteer.launch({ headless: getConfig().headless });
+        return await puppeteer.launch({
+            browser: getConfig().browser,
+            executablePath: getConfig().browserExecutablePath,
+            args: getConfig().browserArgs,
+            headless: getConfig().headless
+        });
     }
 
     return new Promise<Browser>((resolve) => {
@@ -231,7 +236,6 @@ export const processScreenshot = async (page: Page, fileName: string) => {
 
         if (getConfig().updateBaseline) {
             fs.copyFileSync(takeScreenshotPath, baselinePath);
-            console.debug(`Baseline updated: ${baselinePath}`);
         }
     }
 }

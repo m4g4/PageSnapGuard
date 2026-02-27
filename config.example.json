@@ -1,4 +1,7 @@
 {
+    "browser": "chrome",
+    "browserExecutablePath": "",
+    "browserArgs": [],
     "headless": true,
     "baseUrl": "https://www.example.com",
     "globalSelector": ".main-content",

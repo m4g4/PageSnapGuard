@@ -15,8 +15,10 @@ export function getConfig(): ConfigType {
 }
 
 const defaultConfig: Partial<ConfigType> = ({
+    browser: 'chrome',
     browserPoolCount: 3,
-    updateBaseline: false
+    updateBaseline: false,
+    browserArgs: []
 })
 
 export function prepareConfig(cfg: ConfigType): ConfigType {
