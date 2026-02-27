@@ -203,9 +203,10 @@ export const processUrlPathPage = async (pageConfig: UrlPathType) => {
         const targetUrl = url(getConfig().baseUrl, pageConfig);
         logVerbose(`Opening page: ${targetUrl}`);
 
-        await page.goto(targetUrl, { waitUntil: 'networkidle0' });
-        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}`);
-        await page.waitForSelector(getConfig().globalSelector, { timeout: 5000 });
+        logVerbose(`Navigating with waitUntil=${getConfig().gotoWaitUntil}, timeout=${getConfig().navigationTimeoutMs}ms`);
+        await page.goto(targetUrl, { waitUntil: getConfig().gotoWaitUntil, timeout: getConfig().navigationTimeoutMs });
+        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}, timeout=${getConfig().globalSelectorTimeoutMs}ms`);
+        await page.waitForSelector(getConfig().globalSelector, { timeout: getConfig().globalSelectorTimeoutMs });
 
         logVerbose(`Taking root screenshot for: ${pageConfig || 'root'}`);
         await processScreenshot(page, pageConfig);
@@ -223,9 +224,10 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
         const targetUrl = url(getConfig().baseUrl, pageConfig.path);
         logVerbose(`Opening dynamic page: ${targetUrl}`);
 
-        await page.goto(targetUrl, { waitUntil: 'networkidle0' });
-        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}`);
-        await page.waitForSelector(getConfig().globalSelector, { timeout: 5000 });
+        logVerbose(`Navigating with waitUntil=${getConfig().gotoWaitUntil}, timeout=${getConfig().navigationTimeoutMs}ms`);
+        await page.goto(targetUrl, { waitUntil: getConfig().gotoWaitUntil, timeout: getConfig().navigationTimeoutMs });
+        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}, timeout=${getConfig().globalSelectorTimeoutMs}ms`);
+        await page.waitForSelector(getConfig().globalSelector, { timeout: getConfig().globalSelectorTimeoutMs });
 
         for (const action of pageConfig.actions) {
             logVerbose(`Action '${action.name}' on '${pageConfig.path}'`);

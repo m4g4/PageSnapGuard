@@ -73,6 +73,7 @@ function prepareOutputDirectories() {
     console.info('PageSnapGuard started...');
     console.info(`Config: ${path.resolve(argv.config)}`);
     console.info(`Browser: ${getConfig().browser}, Headless: ${getConfig().headless}, Pages: ${getConfig().pages.length}, Update baseline: ${getConfig().updateBaseline}, Verbose: ${getConfig().verbose}`);
+    console.info(`Navigation: waitUntil=${getConfig().gotoWaitUntil}, navTimeout=${getConfig().navigationTimeoutMs}ms, selectorTimeout=${getConfig().globalSelectorTimeoutMs}ms`);
 
     if (getConfig().pages.length === 0) {
         console.error('No pages configured. Add at least one entry to "pages" in the config file.');

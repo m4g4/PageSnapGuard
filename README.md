@@ -102,6 +102,9 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "browserExecutablePath": "",
   "browserArgs": [],
   "verbose": false,
+  "navigationTimeoutMs": 60000,
+  "gotoWaitUntil": "domcontentloaded",
+  "globalSelectorTimeoutMs": 10000,
   "headless": true,
   "baseUrl": "https://www.example.com",
   "globalSelector": ".main-content",
@@ -143,6 +146,16 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 
 - Set `"verbose": true` in config, or pass `--verbose` / `-v` in CLI.
 - Verbose mode prints every processing step (page start/end, actions, comparisons, and baseline updates).
+
+### Navigation Tuning
+
+- `"navigationTimeoutMs"`: timeout for `page.goto(...)` in milliseconds (default `60000`).
+- `"gotoWaitUntil"`: Puppeteer wait strategy for navigation. Allowed: `"load"`, `"domcontentloaded"`, `"networkidle0"`, `"networkidle2"` (default `"domcontentloaded"`).
+- `"globalSelectorTimeoutMs"`: timeout for waiting on `globalSelector` after navigation (default `10000`).
+- If you see frequent `Navigation timeout ... exceeded`, start with:
+  - `"gotoWaitUntil": "domcontentloaded"`
+  - `"navigationTimeoutMs": 90000` or higher
+  - lower `"browserPoolCount"` to reduce concurrent load
 
 ### Baseline Update
 

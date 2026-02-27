@@ -2,12 +2,16 @@ import { Page } from "puppeteer"
 
 export type ViewPortType = { width: number, height: number }
 export type BrowserType = 'chrome' | 'firefox' | 'firefox-esr';
+export type GotoWaitUntilType = 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
 
 export type ConfigType = {
     browser?: BrowserType,
     browserExecutablePath?: string,
     browserArgs?: string[],
     verbose?: boolean,
+    navigationTimeoutMs?: number,
+    gotoWaitUntil?: GotoWaitUntilType,
+    globalSelectorTimeoutMs?: number,
     headless: boolean,
     baseUrl: string,
     globalSelector: string,

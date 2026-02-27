@@ -19,7 +19,10 @@ const defaultConfig: Partial<ConfigType> = ({
     browserPoolCount: 3,
     updateBaseline: false,
     verbose: false,
-    browserArgs: []
+    browserArgs: [],
+    navigationTimeoutMs: 60000,
+    gotoWaitUntil: 'domcontentloaded',
+    globalSelectorTimeoutMs: 10000
 })
 
 export function prepareConfig(cfg: ConfigType): ConfigType {
