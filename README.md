@@ -91,6 +91,7 @@ PageSnapGuard uses a JSON-based configuration to define the actions that should 
   - `selector`: A string representing a CSS selector to target the input field.
   - `what`: A string representing the text to type into the input field.
 - **`ScreenshotActionValueType`**: A string representing a screenshot ID. This will save the screenshot with this ID.
+- **Crawl Page Entry**: An object with `path` and `"crawl": true` that discovers linked pages under `baseUrl`.
 
 ### Example Configuration
 
@@ -105,6 +106,8 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "navigationTimeoutMs": 60000,
   "gotoWaitUntil": "domcontentloaded",
   "globalSelectorTimeoutMs": 10000,
+  "crawlMaxPages": 500,
+  "crawlRequestTimeoutMs": 15000,
   "headless": true,
   "baseUrl": "https://www.example.com",
   "globalSelector": ".main-content",
@@ -125,6 +128,10 @@ Here's an example of how to set up a sequence of actions in the configuration fi
         { "name": "wait", "value": "#dashboard" },
         { "name": "screenshot", "value": "dashboard-screenshot" }
       ]
+    },
+    {
+      "path": "",
+      "crawl": true
     }
   ]
 }
@@ -156,6 +163,15 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   - `"gotoWaitUntil": "domcontentloaded"`
   - `"navigationTimeoutMs": 90000` or higher
   - lower `"browserPoolCount"` to reduce concurrent load
+
+### Crawl Configuration
+
+- In `pages`, you can add crawl entries:
+  - `{ "path": "", "crawl": true }` to crawl from root.
+  - `{ "path": "blog", "crawl": true }` to crawl from `/blog`.
+- Crawler follows only links under your configured `baseUrl`.
+- `"crawlMaxPages"`: maximum pages discovered per crawl seed (default `500`).
+- `"crawlRequestTimeoutMs"`: timeout per crawled page request (default `15000`).
 
 ### Baseline Update
 

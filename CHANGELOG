@@ -1,0 +1,29 @@
+# Changelog
+
+## [2.0.0] - 2024-09-12
+
+### Added
+- Page crawling implementation.
+- Run-and-email automation script.
+- Verbose logging mode for execution tracing.
+
+### Changed
+- Screenshot capture stability improved with viewport fixes, timeout waits, and better animation handling.
+- Root URL handling corrected.
+
+### Fixed
+- General error handling improvements and better runtime diagnostics.
+- Console output cleanup (removed debug/noisy logs, added clearer info/error logs).
+
+## [1.1.0] - 2027-02-27
+
+### Added
+- Baseline update status message output.
+- Custom browser executable configuration, including `firefox-esr` support.
+- Configurable config file path.
+- Configurable timeouts for browser and screenshot operations.
+
+## [1.0.0] - 2024-09-12
+
+### Added
+- First release.

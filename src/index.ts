@@ -1,12 +1,10 @@
-import fs from 'fs';
 import path from 'path';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 
 import { getConfig, setConfig } from './config.js';
 import { closeBrowsers, processPages, PageProcessResult, pruneStaleBaselineFiles } from './pageProcessor.js';
-import { ConfigType } from './types.js';
-import { prepareOutputDir, removeDirFiles } from './utils/utils.js';
+import { prepareOutputDir, removeDirFiles, loadConfig, expandCrawlPages } from './utils/utils.js';
 
 process.on('unhandledRejection', (reason) => {
     console.error('Unhandled promise rejection:', reason);
@@ -17,18 +15,6 @@ process.on('uncaughtException', (error) => {
     console.error('Uncaught exception:', error);
     process.exitCode = 1;
 });
-
-function loadConfig(filePath: string): ConfigType {
-    const configFilePath = path.resolve(filePath);
-    if (!fs.existsSync(configFilePath)) {
-      throw new Error(`Configuration file not found: ${configFilePath}`);
-    }
-  
-    const rawConfig = fs.readFileSync(configFilePath, 'utf-8');
-    const config: ConfigType = JSON.parse(rawConfig);
-  
-    return config;
-}
 
 function prepareOutputDirectories() {
     prepareOutputDir(getConfig().baselineDir);
@@ -58,9 +44,15 @@ function prepareOutputDirectories() {
 
     try {
         const loadedConfig = loadConfig(argv.config);
+        const pagesAfterCrawl = await expandCrawlPages(loadedConfig);
+
+        if (pagesAfterCrawl.length !== loadedConfig.pages.length) {
+            console.info(`Pages after crawl expansion: ${pagesAfterCrawl.length}`);
+        }
 
         setConfig({
             ...loadedConfig,
+            pages: pagesAfterCrawl,
             verbose: argv.verbose ?? loadedConfig.verbose,
             updateBaseline: argv.updateBaseline ?? loadedConfig.updateBaseline
         });

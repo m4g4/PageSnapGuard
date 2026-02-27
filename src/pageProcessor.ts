@@ -2,7 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 import { compareScreenshots, takeScreenshot } from './utils/screenshot.js';
-import { ClickActionValueType, CssSelectorType, DynamicPageConfigType, isSelectorWait, isTimeWait, isUrlPathType, PageConfigurationType, ScreenshotActionValueType, TimeMillisValueType, TypeActionValueType, UrlPathType, WaitActionValueType } from './types.js';
+import { ClickActionValueType, CssSelectorType, DynamicPageConfigType, isCrawlPageConfigType, isSelectorWait, isTimeWait, isUrlPathType, PageConfigurationType, ScreenshotActionValueType, TimeMillisValueType, TypeActionValueType, UrlPathType, WaitActionValueType } from './types.js';
 import { getConfig } from './config.js';
 import { url } from './utils/url.js';
 import { waitForTimeout } from './utils/utils.js';
@@ -19,6 +19,8 @@ let launchedBrowserCount: number = 0;
 const browserPool: Array<Browser> = [];
 const waitingQueue: Array<{ resolve: () => void }> = [];
 const processedBaselineFiles = new Set<string>();
+
+const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value);
 
 const logVerbose = (message: string) => {
     if (getConfig().verbose) {
@@ -128,6 +130,8 @@ const processPageSafely = async (config: PageConfigurationType): Promise<PagePro
     try {
         if (isUrlPathType(config)) {
             await processUrlPathPage(config);
+        } else if (isCrawlPageConfigType(config)) {
+            await processUrlPathPage(config.path);
         } else {
             await processDynamicPage(config);
         }
@@ -208,8 +212,14 @@ export const processUrlPathPage = async (pageConfig: UrlPathType) => {
         logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}, timeout=${getConfig().globalSelectorTimeoutMs}ms`);
         await page.waitForSelector(getConfig().globalSelector, { timeout: getConfig().globalSelectorTimeoutMs });
 
-        logVerbose(`Taking root screenshot for: ${pageConfig || 'root'}`);
-        await processScreenshot(page, pageConfig);
+        const screenshotId = isHttpUrl(pageConfig)
+            ? `${new URL(targetUrl).pathname}${new URL(targetUrl).search}`
+                .replace(/^\/+/, '')
+                .replace(/[^\w.-]+/g, '_') || 'root'
+            : pageConfig;
+
+        logVerbose(`Taking root screenshot for: ${screenshotId || 'root'}`);
+        await processScreenshot(page, screenshotId);
 
     } finally {
         returnBrowserToPool(browser);

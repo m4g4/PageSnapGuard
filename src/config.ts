@@ -22,7 +22,9 @@ const defaultConfig: Partial<ConfigType> = ({
     browserArgs: [],
     navigationTimeoutMs: 60000,
     gotoWaitUntil: 'domcontentloaded',
-    globalSelectorTimeoutMs: 10000
+    globalSelectorTimeoutMs: 10000,
+    crawlMaxPages: 500,
+    crawlRequestTimeoutMs: 15000
 })
 
 export function prepareConfig(cfg: ConfigType): ConfigType {

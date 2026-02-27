@@ -6,6 +6,8 @@
     "navigationTimeoutMs": 60000,
     "gotoWaitUntil": "domcontentloaded",
     "globalSelectorTimeoutMs": 10000,
+    "crawlMaxPages": 500,
+    "crawlRequestTimeoutMs": 15000,
     "headless": true,
     "baseUrl": "https://www.example.com",
     "globalSelector": ".main-content",
@@ -27,6 +29,10 @@
           { "name": "wait", "value": "#dashboard" },
           { "name": "screenshot", "value": "dashboard-screenshot" }
         ]
+      },
+      {
+        "path": "",
+        "crawl": true
       }
     ]
   }

@@ -12,6 +12,8 @@ export type ConfigType = {
     navigationTimeoutMs?: number,
     gotoWaitUntil?: GotoWaitUntilType,
     globalSelectorTimeoutMs?: number,
+    crawlMaxPages?: number,
+    crawlRequestTimeoutMs?: number,
     headless: boolean,
     baseUrl: string,
     globalSelector: string,
@@ -34,10 +36,19 @@ export type DynamicPageConfigType = {
     actions: ActionType[]
 }
 
-export type PageConfigurationType  = DynamicPageConfigType | UrlPathType;
+export type CrawlPageConfigType = {
+    path: string,
+    crawl: boolean
+}
+
+export type PageConfigurationType  = DynamicPageConfigType | CrawlPageConfigType | UrlPathType;
 
 export function isUrlPathType(config: PageConfigurationType): config is UrlPathType {
     return typeof config === 'string';
+}
+
+export function isCrawlPageConfigType(config: PageConfigurationType): config is CrawlPageConfigType {
+    return typeof config === 'object' && config !== null && 'crawl' in config && config.crawl === true;
 }
 
 export type TimeMillisValueType = number;
