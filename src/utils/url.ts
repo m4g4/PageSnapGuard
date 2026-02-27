@@ -43,7 +43,8 @@ function urlToPagePath(baseUrl: URL, pageUrlRaw: string): string | null {
     }
 
     const relativePath = currentPath === baseUrl.pathname ? '' : currentPath.slice(basePath.length);
-    return `${relativePath}${pageUrl.search}`;
+    const normalizedRelativePath = relativePath.replace(/\/+$/, '');
+    return `${normalizedRelativePath}${pageUrl.search}`;
 }
 
 export { isHttpUrl, toAbsoluteHttpUrl, url, urlToPagePath };

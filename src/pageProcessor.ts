@@ -22,6 +22,18 @@ const processedBaselineFiles = new Set<string>();
 
 const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value);
 
+const toScreenshotFileName = (rawName: string): string => {
+    const normalized = rawName
+        .trim()
+        .replace(/^\/+|\/+$/g, '')
+        .replace(/[?#]/g, '_')
+        .replace(/[<>:"\\|*]+/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/\/{2,}/g, '/');
+
+    return normalized || 'root';
+}
+
 const logVerbose = (message: string) => {
     if (getConfig().verbose) {
         console.info(`[verbose] ${message}`);
@@ -281,10 +293,13 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
     
 export const processScreenshot = async (page: Page, fileName: string) => {
 
-    const screenshotFileName = !!fileName ? fileName : 'root';
+    const screenshotFileName = toScreenshotFileName(fileName);
     const takeScreenshotPathName: string = getConfig().screenshotDir+'/'+screenshotFileName;
     const baselinePathName: string = getConfig().baselineDir+'/'+screenshotFileName;
     const diffPathName = getConfig().diffDir+'/'+screenshotFileName;
+    fs.mkdirSync(path.dirname(takeScreenshotPathName), { recursive: true });
+    fs.mkdirSync(path.dirname(baselinePathName), { recursive: true });
+    fs.mkdirSync(path.dirname(diffPathName), { recursive: true });
 
     await takeScreenshot(page, takeScreenshotPathName, getConfig().viewPort);
 

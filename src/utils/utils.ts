@@ -4,6 +4,28 @@ import { Page } from 'puppeteer';
 import { ConfigType, isCrawlPageConfigType, isUrlPathType, PageConfigurationType } from '../types.js';
 import { isHttpUrl, toAbsoluteHttpUrl, urlToPagePath } from './url.js';
 
+const blockedAssetExtensions = new Set([
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico', 'bmp', 'tif', 'tiff', 'avif',
+    'mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v',
+    'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac',
+    'pdf', 'zip', 'rar', '7z', 'tar', 'gz', 'bz2',
+    'woff', 'woff2', 'ttf', 'otf', 'eot',
+    'css', 'js', 'map', 'json', 'xml', 'txt', 'csv'
+]);
+
+function isAssetOrFilePath(pagePath: string): boolean {
+    const pathWithoutQuery = pagePath.split('?')[0];
+    const fileName = pathWithoutQuery.split('/').pop() ?? '';
+    const dotIndex = fileName.lastIndexOf('.');
+
+    if (dotIndex <= 0 || dotIndex === fileName.length - 1) {
+        return false;
+    }
+
+    const extension = fileName.slice(dotIndex + 1).toLowerCase();
+    return blockedAssetExtensions.has(extension);
+}
+
 export async function removeDirFiles(dirPath: string) {
     fs.readdir(dirPath, (err, files) => {
         if (err) throw err;
@@ -108,6 +130,9 @@ async function crawlPagesFromSeed(baseUrl: URL, seedPath: string, maxPages: numb
 
             const pagePath = urlToPagePath(baseUrl, absoluteUrl);
             if (pagePath === null) {
+                continue;
+            }
+            if (isAssetOrFilePath(pagePath)) {
                 continue;
             }
 
