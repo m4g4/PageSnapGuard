@@ -297,7 +297,7 @@ export const processScreenshot = async (page: Page, fileName: string) => {
 
         if (getConfig().updateBaseline) {
             fs.copyFileSync(takeScreenshotPath, baselinePath);
-            console.info(`Baseline updated: ${baselinePath}`);
+            logVerbose(`Baseline updated: ${baselinePath}`);
         }
     }
 }
