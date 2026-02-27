@@ -54,7 +54,13 @@ After you have Node.js and npm installed, follow these steps to set up **PageSna
 
 4. **Running PageSnapGuard**:
     ```bash
-    npm run capture
+    npm run capture -- --config config.json
+    ```
+
+   Run multiple configurations one after another:
+    ```bash
+    npm run capture -- --config config.site-a.json
+    npm run capture -- --config config.site-b.json
     ```
 
 

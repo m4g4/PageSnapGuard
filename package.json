@@ -6,7 +6,8 @@
   "scripts": {
     "build": "npx tsc",
     "test": "echo 'No tests yet'",
-    "capture": "node dist/index.js --config config.json"
+    "capture": "node dist/index.js",
+    "capture:default": "node dist/index.js --config config.json"
   },
   "keywords": [],
   "author": "",
