@@ -1,5 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import fs from 'fs';
+import path from 'path';
 import { compareScreenshots, takeScreenshot } from './utils/screenshot.js';
 import { ClickActionValueType, CssSelectorType, DynamicPageConfigType, isSelectorWait, isTimeWait, isUrlPathType, PageConfigurationType, ScreenshotActionValueType, TimeMillisValueType, TypeActionValueType, UrlPathType, WaitActionValueType } from './types.js';
 import { getConfig } from './config.js';
@@ -17,6 +18,7 @@ export type PageProcessResult = {
 let launchedBrowserCount: number = 0;
 const browserPool: Array<Browser> = [];
 const waitingQueue: Array<{ resolve: () => void }> = [];
+const processedBaselineFiles = new Set<string>();
 
 export const getBrowser = async () => {
     
@@ -101,6 +103,45 @@ export const processPages = (): Promise<PageProcessResult>[] => {
     return pagePromises;
 }
 
+export const pruneStaleBaselineFiles = () => {
+    const baselineDir = getConfig().baselineDir;
+
+    const walk = (dirPath: string): string[] => {
+        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+        const files: string[] = [];
+
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+
+            if (entry.isDirectory()) {
+                files.push(...walk(fullPath));
+                continue;
+            }
+
+            files.push(fullPath);
+        }
+
+        return files;
+    };
+
+    if (!fs.existsSync(baselineDir)) {
+        return;
+    }
+
+    const baselineFiles = walk(baselineDir);
+    for (const filePath of baselineFiles) {
+        if (!filePath.endsWith('.png')) {
+            continue;
+        }
+
+        const relativePath = path.relative(baselineDir, filePath).split(path.sep).join('/');
+        if (!processedBaselineFiles.has(relativePath)) {
+            fs.unlinkSync(filePath);
+            console.debug(`Removed stale baseline: ${filePath}`);
+        }
+    }
+}
+
 export const processUrlPathPage = async (pageConfig: UrlPathType) => {
     const browser = await getBrowser();
 
@@ -177,22 +218,20 @@ export const processScreenshot = async (page: Page, fileName: string) => {
     const takeScreenshotPath: string = `${takeScreenshotPathName}.png`;
     const baselinePath: string = `${baselinePathName}.png`;
     const diffPath = `${diffPathName}.png`;
-
-    if (getConfig().updateBaseline) {
-        fs.copyFileSync(takeScreenshotPath, baselinePath);
-        console.debug(`Baseline updated: ${baselinePath}`);
-        return;
-    }
+    processedBaselineFiles.add(`${screenshotFileName}.png`);
 
     if (!fs.existsSync(baselinePath)) {
         console.debug(`New screenshot: ${baselinePath}`);
-        fs.copyFile(takeScreenshotPath, baselinePath, (err) => {
-            if (err) console.error('Failed copying file! ' + err);
-        });
+        fs.copyFileSync(takeScreenshotPath, baselinePath);
     } else {
         const difference = compareScreenshots(takeScreenshotPath, baselinePath, diffPath);
 
         if (difference > getConfig().diffTresholdPct)
             console.error(`Difference in ${screenshotFileName}: ${difference.toFixed(2)}%`);
+
+        if (getConfig().updateBaseline) {
+            fs.copyFileSync(takeScreenshotPath, baselinePath);
+            console.debug(`Baseline updated: ${baselinePath}`);
+        }
     }
 }

@@ -4,7 +4,7 @@ import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 
 import { getConfig, setConfig } from './config.js';
-import { closeBrowsers, processPages, PageProcessResult } from './pageProcessor.js';
+import { closeBrowsers, processPages, PageProcessResult, pruneStaleBaselineFiles } from './pageProcessor.js';
 import { ConfigType } from './types.js';
 import { prepareOutputDir, removeDirFiles } from './utils/utils.js';
 
@@ -83,6 +83,10 @@ function prepareOutputDirectories() {
         console.error(`PageSnapGuard finished with errors. Failed pages: ${failedPages.length}/${results.length}`);
         process.exitCode = 1;
         return;
+    }
+
+    if (getConfig().updateBaseline) {
+        pruneStaleBaselineFiles();
     }
 
     console.info('PageSnapGuard finished succesfully!');
