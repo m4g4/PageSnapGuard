@@ -6,6 +6,14 @@ import { getConfig } from './config.js';
 import { url } from './utils/url.js';
 import { waitForTimeout } from './utils/utils.js';
 
+export type PageUrlType = string | 'url';
+
+export type PageProcessResult = {
+    pageUrl: PageUrlType,
+    success: boolean,
+    error?: string
+}
+
 let launchedBrowserCount: number = 0;
 const browserPool: Array<Browser> = [];
 const waitingQueue: Array<{ resolve: () => void }> = [];
@@ -46,18 +54,48 @@ export const closeBrowsers = () => {
     browserPool.forEach(b => b.close());
 } 
 
-export const processPages = (): Promise<void>[] => {
+const toPageUrl = (config: PageConfigurationType): PageUrlType => {
+    if (isUrlPathType(config)) {
+        return config || 'root';
+    }
+
+    return config.path || 'root';
+}
+
+const toErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    return String(error);
+}
+
+const processPageSafely = async (config: PageConfigurationType): Promise<PageProcessResult> => {
+    const pageUrl = toPageUrl(config);
+
+    try {
+        if (isUrlPathType(config)) {
+            await processUrlPathPage(config);
+        } else {
+            await processDynamicPage(config);
+        }
+
+        return { pageUrl, success: true };
+    } catch (error) {
+        return {
+            pageUrl,
+            success: false,
+            error: toErrorMessage(error)
+        };
+    }
+}
+
+export const processPages = (): Promise<PageProcessResult>[] => {
     const pageConfig = getConfig().pages;
 
-    const pagePromises: Promise<void>[] = [];
+    const pagePromises: Promise<PageProcessResult>[] = [];
     for (let i = 0; i < getConfig().pages.length; i++) {
-        const config = pageConfig[i];
-     
-        if (isUrlPathType(config)) {
-            pagePromises.push(processUrlPathPage(pageConfig[i] as UrlPathType))
-        } else {
-            pagePromises.push(processDynamicPage(pageConfig[i] as DynamicPageConfigType))
-        }
+        pagePromises.push(processPageSafely(pageConfig[i]));
     }
 
     return pagePromises;

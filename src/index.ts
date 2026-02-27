@@ -4,7 +4,7 @@ import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 
 import { getConfig, setConfig } from './config.js';
-import { closeBrowsers, processPages } from './pageProcessor.js';
+import { closeBrowsers, processPages, PageProcessResult } from './pageProcessor.js';
 import { ConfigType } from './types.js';
 import { prepareOutputDir, removeDirFiles } from './utils/utils.js';
 
@@ -59,14 +59,31 @@ function prepareOutputDirectories() {
 
     prepareOutputDirectories();
 
+    let results: PageProcessResult[] = [];
+
     try {
-        await Promise.all(processPages());
-
-        closeBrowsers();
-
-        console.info('PageSnapGuard finished succesfully!');
-
+        results = await Promise.all(processPages());
     } catch (error) {
         console.error("PageSnapGuard error:", error);
+    } finally {
+        try {
+            closeBrowsers();
+        } catch (error) {
+            console.error("Failed closing browsers:", error);
+        }
     }
+
+    const failedPages = results.filter(r => !r.success);
+
+    if (failedPages.length > 0) {
+        for (const failedPage of failedPages) {
+            console.error(`Page failed: ${failedPage.pageUrl} - ${failedPage.error}`);
+        }
+
+        console.error(`PageSnapGuard finished with errors. Failed pages: ${failedPages.length}/${results.length}`);
+        process.exitCode = 1;
+        return;
+    }
+
+    console.info('PageSnapGuard finished succesfully!');
 })();
