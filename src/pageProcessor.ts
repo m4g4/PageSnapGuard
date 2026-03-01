@@ -12,6 +12,7 @@ export type PageUrlType = string | 'url';
 export type PageProcessResult = {
     pageUrl: PageUrlType,
     success: boolean,
+    differencePct?: number,
     error?: string
 }
 
@@ -140,20 +141,19 @@ const processPageSafely = async (config: PageConfigurationType): Promise<PagePro
     logVerbose(`Page started: ${pageUrl}`);
 
     try {
+        let differencePct: number | undefined;
         if (isUrlPathType(config)) {
-            await processUrlPathPage(config);
+            differencePct = await processUrlPathPage(config);
         } else if (isCrawlPageConfigType(config)) {
-            await processUrlPathPage(config.path);
+            differencePct = await processUrlPathPage(config.path);
         } else {
-            await processDynamicPage(config);
+            differencePct = await processDynamicPage(config);
         }
 
         logVerbose(`Page finished: ${pageUrl}`);
-        console.info(`Page result: ${pageUrl} - success`);
-        return { pageUrl, success: true };
+        return { pageUrl, success: true, differencePct };
     } catch (error) {
         logVerbose(`Page failed: ${pageUrl} - ${toErrorMessage(error)}`);
-        console.error(`Page result: ${pageUrl} - failed (${toErrorMessage(error)})`);
         return {
             pageUrl,
             success: false,
@@ -213,7 +213,7 @@ export const pruneStaleBaselineFiles = () => {
     }
 }
 
-export const processUrlPathPage = async (pageConfig: UrlPathType) => {
+export const processUrlPathPage = async (pageConfig: UrlPathType): Promise<number | undefined> => {
     const browser = await getBrowser();
 
     try {
@@ -233,15 +233,16 @@ export const processUrlPathPage = async (pageConfig: UrlPathType) => {
             : pageConfig;
 
         logVerbose(`Taking root screenshot for: ${screenshotId || 'root'}`);
-        await processScreenshot(page, screenshotId);
+        return await processScreenshot(page, screenshotId);
 
     } finally {
         returnBrowserToPool(browser);
     }
 }
 
-export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
+export const processDynamicPage = async (pageConfig: DynamicPageConfigType): Promise<number | undefined> => {
     const browser = await getBrowser();
+    let maxDifferencePct: number | undefined;
     
     try {
         const page = await browser.newPage();
@@ -280,7 +281,10 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
 
                 case 'screenshot':
                     const screenshotId = action.value as ScreenshotActionValueType;
-                    await processScreenshot(page, `${pageConfig.path}_${screenshotId}`)
+                    const screenshotDiff = await processScreenshot(page, `${pageConfig.path}_${screenshotId}`);
+                    if (typeof screenshotDiff === 'number' && (maxDifferencePct === undefined || screenshotDiff > maxDifferencePct)) {
+                        maxDifferencePct = screenshotDiff;
+                    }
                     logVerbose(`Screenshot saved to: ${action.value}`);
                     break;
 
@@ -288,12 +292,13 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType) => {
                     console.error(`Unknown action: ${action.name}`);
             }
         }
+        return maxDifferencePct;
     } finally {
         returnBrowserToPool(browser);
     }
 }
     
-export const processScreenshot = async (page: Page, fileName: string) => {
+export const processScreenshot = async (page: Page, fileName: string): Promise<number | undefined> => {
 
     const screenshotFileName = toScreenshotFileName(fileName);
     const takeScreenshotPathName: string = getConfig().screenshotDir+'/'+screenshotFileName;
@@ -314,17 +319,17 @@ export const processScreenshot = async (page: Page, fileName: string) => {
     if (!fs.existsSync(baselinePath)) {
         logVerbose(`Baseline missing. Creating: ${baselinePath}`);
         fs.copyFileSync(takeScreenshotPath, baselinePath);
+        return undefined;
     } else {
         logVerbose(`Comparing ${takeScreenshotPath} against baseline ${baselinePath}`);
         const difference = compareScreenshots(takeScreenshotPath, baselinePath, diffPath);
         logVerbose(`Diff for ${screenshotFileName}: ${difference.toFixed(2)}%`);
 
-        if (difference > getConfig().diffTresholdPct)
-            console.error(`Difference in ${screenshotFileName}: ${difference.toFixed(2)}%`);
-
         if (getConfig().updateBaseline) {
             fs.copyFileSync(takeScreenshotPath, baselinePath);
             logVerbose(`Baseline updated: ${baselinePath}`);
         }
+
+        return difference;
     }
 }

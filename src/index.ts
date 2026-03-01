@@ -64,8 +64,10 @@ function prepareOutputDirectories() {
 
     console.info('PageSnapGuard started...');
     console.info(`Config: ${path.resolve(argv.config)}`);
-    console.info(`Browser: ${getConfig().browser}, Headless: ${getConfig().headless}, Pages: ${getConfig().pages.length}, Update baseline: ${getConfig().updateBaseline}, Verbose: ${getConfig().verbose}`);
-    console.info(`Navigation: waitUntil=${getConfig().gotoWaitUntil}, navTimeout=${getConfig().navigationTimeoutMs}ms, selectorTimeout=${getConfig().globalSelectorTimeoutMs}ms`);
+    if (getConfig().verbose) {
+        console.info(`Browser: ${getConfig().browser}, Headless: ${getConfig().headless}, Pages: ${getConfig().pages.length}, Update baseline: ${getConfig().updateBaseline}, Verbose: ${getConfig().verbose}`);
+        console.info(`Navigation: waitUntil=${getConfig().gotoWaitUntil}, navTimeout=${getConfig().navigationTimeoutMs}ms, selectorTimeout=${getConfig().globalSelectorTimeoutMs}ms`);
+    }
 
     if (getConfig().pages.length === 0) {
         console.error('No pages configured. Add at least one entry to "pages" in the config file.');
@@ -94,7 +96,10 @@ function prepareOutputDirectories() {
     console.info('Page results:');
     for (const result of results) {
         if (result.success) {
-            console.info(`- ${result.pageUrl}: success`);
+            const differencePct = typeof result.differencePct === 'number'
+                ? `${result.differencePct.toFixed(2)}%`
+                : 'n/a';
+            console.info(`- ${result.pageUrl}: ${differencePct}`);
         } else {
             console.info(`- ${result.pageUrl}: failed (${result.error})`);
         }
