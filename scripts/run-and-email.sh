@@ -13,6 +13,8 @@ Options:
   --subject-prefix <text>  Subject prefix (default: PageSnapGuard)
   --log <file>             Log file path (default: /tmp/pagesnapguard-<timestamp>.log)
   --always                 Send email also on success (default: send only on failure)
+  --html-template <file>   HTML template file for email body (optional)
+  --html-extra <file>      Extra HTML snippet file appended to the HTML body (optional)
   --verbose, -v            Forward verbose mode to PageSnapGuard
   --update-baseline, -u    Forward baseline update mode to PageSnapGuard
   -h, --help               Show this help
@@ -20,16 +22,21 @@ Options:
 Requirements:
   - msmtp configured (e.g. ~/.msmtprc with an account + auth settings)
   - Built app (dist/index.js exists)
+
+HTML template placeholders:
+  {{HOST}} {{CONFIG}} {{EXIT_CODE}} {{STATUS}} {{STATUS_CLASS}} {{LOG_FILE}} {{RUN_OUTPUT}} {{EXTRA_HTML}}
 EOF
 }
 
 CONFIG_FILE=""
 TO_EMAIL=""
-FROM_EMAIL=""
+FROM_EMAIL="pagesnapguard@localhost"
 SUBJECT_PREFIX="PageSnapGuard"
 ALWAYS_SEND="false"
 LOG_FILE=""
 FORWARDED_ARGS=()
+HTML_TEMPLATE_FILE=""
+HTML_EXTRA_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -56,6 +63,14 @@ while [[ $# -gt 0 ]]; do
     --always)
       ALWAYS_SEND="true"
       shift
+      ;;
+    --html-template)
+      HTML_TEMPLATE_FILE="${2:-}"
+      shift 2
+      ;;
+    --html-extra)
+      HTML_EXTRA_FILE="${2:-}"
+      shift 2
       ;;
     --verbose|-v)
       FORWARDED_ARGS+=("--verbose")
@@ -90,6 +105,16 @@ fi
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "Config file not found: $CONFIG_FILE" >&2
+  exit 2
+fi
+
+if [[ -n "$HTML_TEMPLATE_FILE" && ! -f "$HTML_TEMPLATE_FILE" ]]; then
+  echo "HTML template file not found: $HTML_TEMPLATE_FILE" >&2
+  exit 2
+fi
+
+if [[ -n "$HTML_EXTRA_FILE" && ! -f "$HTML_EXTRA_FILE" ]]; then
+  echo "HTML extra file not found: $HTML_EXTRA_FILE" >&2
   exit 2
 fi
 
@@ -133,22 +158,96 @@ HOSTNAME_VALUE="$(hostname 2>/dev/null || echo unknown-host)"
 DATE_VALUE="$(date -R)"
 
 SUBJECT="${SUBJECT_PREFIX} ${STATUS_TEXT} (exit ${RUN_EXIT_CODE})"
+LOG_CONTENT="$(cat "$LOG_FILE")"
 
-{
-  printf 'From: %s\n' "$FROM_EMAIL"
-  printf 'To: %s\n' "$TO_EMAIL"
-  printf 'Subject: %s\n' "$SUBJECT"
-  printf 'Date: %s\n' "$DATE_VALUE"
-  printf 'MIME-Version: 1.0\n'
-  printf 'Content-Type: text/plain; charset=UTF-8\n'
-  printf '\n'
-  printf 'Host: %s\n' "$HOSTNAME_VALUE"
-  printf 'Config: %s\n' "$CONFIG_FILE"
-  printf 'Exit code: %s\n' "$RUN_EXIT_CODE"
-  printf 'Log file: %s\n' "$LOG_FILE"
-  printf '\n---- Output ----\n\n'
-  cat "$LOG_FILE"
-} | msmtp -t
+TEXT_BODY="$(cat <<EOF
+Host: $HOSTNAME_VALUE
+Config: $CONFIG_FILE
+Exit code: $RUN_EXIT_CODE
+Log file: $LOG_FILE
+
+---- Output ----
+
+$LOG_CONTENT
+EOF
+)"
+
+escape_html() {
+  sed -e 's/&/\&amp;/g' \
+      -e 's/</\&lt;/g' \
+      -e 's/>/\&gt;/g'
+}
+
+render_html_template() {
+  local template="$1"
+  local extra_html="$2"
+  local escaped_host escaped_config escaped_exit escaped_status escaped_status_class escaped_log_file escaped_output
+
+  escaped_host="$(printf '%s' "$HOSTNAME_VALUE" | escape_html)"
+  escaped_config="$(printf '%s' "$CONFIG_FILE" | escape_html)"
+  escaped_exit="$(printf '%s' "$RUN_EXIT_CODE" | escape_html)"
+  escaped_status="$(printf '%s' "$STATUS_TEXT" | escape_html)"
+  escaped_status_class="fail"
+  if [[ "$RUN_EXIT_CODE" -eq 0 ]]; then
+    escaped_status_class="ok"
+  fi
+  escaped_log_file="$(printf '%s' "$LOG_FILE" | escape_html)"
+  escaped_output="$(printf '%s' "$LOG_CONTENT" | escape_html)"
+
+  template="${template//\{\{HOST\}\}/$escaped_host}"
+  template="${template//\{\{CONFIG\}\}/$escaped_config}"
+  template="${template//\{\{EXIT_CODE\}\}/$escaped_exit}"
+  template="${template//\{\{STATUS\}\}/$escaped_status}"
+  template="${template//\{\{STATUS_CLASS\}\}/$escaped_status_class}"
+  template="${template//\{\{LOG_FILE\}\}/$escaped_log_file}"
+  template="${template//\{\{RUN_OUTPUT\}\}/$escaped_output}"
+  template="${template//\{\{EXTRA_HTML\}\}/$extra_html}"
+  printf '%s' "$template"
+}
+
+if [[ -z "$HTML_TEMPLATE_FILE" ]]; then
+  {
+    printf 'From: %s\n' "$FROM_EMAIL"
+    printf 'To: %s\n' "$TO_EMAIL"
+    printf 'Subject: %s\n' "$SUBJECT"
+    printf 'Date: %s\n' "$DATE_VALUE"
+    printf 'MIME-Version: 1.0\n'
+    printf 'Content-Type: text/plain; charset=UTF-8\n'
+    printf '\n'
+    printf '%s\n' "$TEXT_BODY"
+  } | msmtp -t
+else
+  BOUNDARY="pagesnapguard-$(date +%s)-$$"
+  HTML_TEMPLATE_CONTENT="$(cat "$HTML_TEMPLATE_FILE")"
+  HTML_EXTRA_CONTENT=""
+  if [[ -n "$HTML_EXTRA_FILE" ]]; then
+    HTML_EXTRA_CONTENT="$(cat "$HTML_EXTRA_FILE")"
+  fi
+  HTML_BODY="$(render_html_template "$HTML_TEMPLATE_CONTENT" "$HTML_EXTRA_CONTENT")"
+
+  {
+    printf 'From: %s\n' "$FROM_EMAIL"
+    printf 'To: %s\n' "$TO_EMAIL"
+    printf 'Subject: %s\n' "$SUBJECT"
+    printf 'Date: %s\n' "$DATE_VALUE"
+    printf 'MIME-Version: 1.0\n'
+    printf 'Content-Type: multipart/alternative; boundary="%s"\n' "$BOUNDARY"
+    printf '\n'
+    printf -- '--%s\n' "$BOUNDARY"
+    printf 'Content-Type: text/plain; charset=UTF-8\n'
+    printf 'Content-Transfer-Encoding: 8bit\n'
+    printf '\n'
+    printf '%s\n' "$TEXT_BODY"
+    printf '\n'
+    printf -- '--%s\n' "$BOUNDARY"
+    printf 'Content-Type: text/html; charset=UTF-8\n'
+    printf 'Content-Transfer-Encoding: 8bit\n'
+    printf '\n'
+    printf '%s\n' "$HTML_BODY"
+    printf '\n'
+    printf -- '--%s--\n' "$BOUNDARY"
+  } | msmtp -t
+fi
 
 echo "Email sent to $TO_EMAIL"
 exit "$RUN_EXIT_CODE"

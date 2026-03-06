@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageSnapGuard Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; color: #1f2937; }
+    .ok { color: #166534; }
+    .fail { color: #b91c1c; }
+    .meta { margin: 12px 0; }
+    pre {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h2>PageSnapGuard Run: <span class="{{STATUS_CLASS}}">{{STATUS}}</span></h2>
+  <div class="meta"><strong>Host:</strong> {{HOST}}</div>
+  <div class="meta"><strong>Config:</strong> {{CONFIG}}</div>
+  <div class="meta"><strong>Exit code:</strong> {{EXIT_CODE}}</div>
+  <div class="meta"><strong>Log file:</strong> {{LOG_FILE}}</div>
+
+  {{EXTRA_HTML}}
+
+  <h3>Output</h3>
+  <pre>{{RUN_OUTPUT}}</pre>
+</body>
+</html>
