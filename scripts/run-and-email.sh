@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/run-and-email.sh --config <config.json> --to <email> [options]
+  scripts/run-and-email.sh --config <config.json> --to <email> [options] [-- <pagesnapguard args>]
 
 Options:
   --config <file>          Config file passed to PageSnapGuard (required)
@@ -13,6 +13,8 @@ Options:
   --subject-prefix <text>  Subject prefix (default: PageSnapGuard)
   --log <file>             Log file path (default: /tmp/pagesnapguard-<timestamp>.log)
   --always                 Send email also on success (default: send only on failure)
+  --verbose, -v            Forward verbose mode to PageSnapGuard
+  --update-baseline, -u    Forward baseline update mode to PageSnapGuard
   -h, --help               Show this help
 
 Requirements:
@@ -27,6 +29,7 @@ FROM_EMAIL="pagesnapguard@localhost"
 SUBJECT_PREFIX="PageSnapGuard"
 ALWAYS_SEND="false"
 LOG_FILE=""
+FORWARDED_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -53,6 +56,19 @@ while [[ $# -gt 0 ]]; do
     --always)
       ALWAYS_SEND="true"
       shift
+      ;;
+    --verbose|-v)
+      FORWARDED_ARGS+=("--verbose")
+      shift
+      ;;
+    --update-baseline|-u)
+      FORWARDED_ARGS+=("--update-baseline")
+      shift
+      ;;
+    --)
+      shift
+      FORWARDED_ARGS+=("$@")
+      break
       ;;
     -h|--help)
       usage
@@ -94,9 +110,12 @@ fi
 
 echo "Running PageSnapGuard with config: $CONFIG_FILE"
 echo "Log file: $LOG_FILE"
+if [[ "${#FORWARDED_ARGS[@]}" -gt 0 ]]; then
+  echo "Forwarded PageSnapGuard args: ${FORWARDED_ARGS[*]}"
+fi
 
 set +e
-node dist/index.js --config "$CONFIG_FILE" 2>&1 | tee "$LOG_FILE"
+node dist/index.js --config "$CONFIG_FILE" "${FORWARDED_ARGS[@]}" 2>&1 | tee "$LOG_FILE"
 RUN_EXIT_CODE=${PIPESTATUS[0]}
 set -e
 
