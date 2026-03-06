@@ -25,7 +25,7 @@ EOF
 
 CONFIG_FILE=""
 TO_EMAIL=""
-FROM_EMAIL="pagesnapguard@localhost"
+FROM_EMAIL=""
 SUBJECT_PREFIX="PageSnapGuard"
 ALWAYS_SEND="false"
 LOG_FILE=""
