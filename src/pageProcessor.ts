@@ -258,7 +258,7 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType): Pro
             logVerbose(`Action '${action.name}' on '${pageConfig.path}'`);
             switch (action.name) {
                 case 'click':
-                    await page.click(action.value as ClickActionValueType);
+                    await page.$eval(action.value as ClickActionValueType, el => (el as HTMLElement).click())
                     logVerbose(`Clicked on element: ${action.value}`);
                     break;
 

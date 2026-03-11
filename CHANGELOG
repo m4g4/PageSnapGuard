@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Clicking now forces interaction even when elements are not visible to improve reliability.
+
 ## [2.1.0] - 2026-03-01
 
 ### Changed
