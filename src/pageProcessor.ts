@@ -26,8 +26,17 @@ const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value);
 const toScreenshotFileName = (rawName: string): string => {
     const normalized = rawName
         .trim()
+        // Normalize common HTML entities that can leak into URLs (e.g. &amp;)
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        // Drop template-style placeholders if they somehow leak into the path
+        .replace(/\{\{[^}]+\}\}/g, '')
         .replace(/^\/+|\/+$/g, '')
         .replace(/[?#]/g, '_')
+        .replace(/[&=]/g, '_')
         .replace(/[<>:"\\|*]+/g, '_')
         .replace(/\s+/g, '_')
         .replace(/\/{2,}/g, '/');
