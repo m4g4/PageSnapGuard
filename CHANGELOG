@@ -3,10 +3,11 @@
 ## [2.2.0] - 2026-03-12
 
 ### Added
-- Configurable report mode (`reportMode`) to control whether all pages, only broken pages, or broken-first output is printed.
+- Configurable report mode (`reportMode`) to control whether all pages, only changed pages, or changed-first output is printed.
+- Configurable diff image saving (`saveDiffs`) to control when diff images are written.
 
 ### Changed
-- Page results output now supports broken-first reporting and respects the configured diff threshold when listing broken pages.
+- Page results output now supports changed-first reporting and respects the configured diff threshold when listing changed pages.
 
 ## [2.1.1] - 2026-03-11
 

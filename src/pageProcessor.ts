@@ -129,12 +129,18 @@ export const closeBrowsers = () => {
     browserPool.forEach(b => b.close());
 } 
 
-const toPageUrl = (config: PageConfigurationType): PageUrlType => {
+const toPageLabel = (config: PageConfigurationType): PageUrlType => {
     if (isUrlPathType(config)) {
         return config || 'root';
     }
 
-    return config.path || 'root';
+    const pathLabel = config.path || 'root';
+    const name = 'name' in config ? config.name : undefined;
+    if (typeof name === 'string' && name.trim().length > 0) {
+        return `${name.trim()} (${pathLabel})`;
+    }
+
+    return pathLabel;
 }
 
 const toErrorMessage = (error: unknown): string => {
@@ -146,7 +152,7 @@ const toErrorMessage = (error: unknown): string => {
 }
 
 const processPageSafely = async (config: PageConfigurationType): Promise<PageProcessResult> => {
-    const pageUrl = toPageUrl(config);
+    const pageUrl = toPageLabel(config);
     logVerbose(`Page started: ${pageUrl}`);
 
     try {
@@ -331,14 +337,23 @@ export const processScreenshot = async (page: Page, fileName: string): Promise<n
         return undefined;
     } else {
         logVerbose(`Comparing ${takeScreenshotPath} against baseline ${baselinePath}`);
-        const difference = compareScreenshots(takeScreenshotPath, baselinePath, diffPath);
-        logVerbose(`Diff for ${screenshotFileName}: ${difference.toFixed(2)}%`);
+        const { differencePct, diffPng } = compareScreenshots(takeScreenshotPath, baselinePath);
+        logVerbose(`Diff for ${screenshotFileName}: ${differencePct.toFixed(2)}%`);
+
+        const diffThresholdPct = getConfig().diffTresholdPct ?? 0;
+        const saveDiffs = getConfig().saveDiffs ?? 'all';
+        const isChanged = differencePct >= diffThresholdPct;
+        const shouldWriteDiff = saveDiffs === 'all' || (saveDiffs === 'changed' && isChanged);
+
+        if (diffPng && shouldWriteDiff) {
+            fs.writeFileSync(diffPath, diffPng);
+        }
 
         if (getConfig().updateBaseline) {
             fs.copyFileSync(takeScreenshotPath, baselinePath);
             logVerbose(`Baseline updated: ${baselinePath}`);
         }
 
-        return difference;
+        return differencePct;
     }
 }

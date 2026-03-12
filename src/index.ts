@@ -113,7 +113,7 @@ function prepareOutputDirectories() {
         return `- ${result.pageUrl}: ${result.differencePct.toFixed(2)}%`;
     };
 
-    const renderBrokenResult = (result: PageProcessResult): string | null => {
+    const renderChangedResult = (result: PageProcessResult): string | null => {
         if (!result.success) {
             return null;
         }
@@ -131,19 +131,19 @@ function prepareOutputDirectories() {
 
     console.info(`Diff threshold: ${diffThresholdPct.toFixed(2)}%`);
 
-    if (reportMode === 'broken' || reportMode === 'broken-first') {
-        console.info(`Broken pages (>= ${diffThresholdPct.toFixed(2)}%):`);
-        const brokenLines = results.map(renderBrokenResult).filter(Boolean) as string[];
-        if (brokenLines.length === 0) {
+    if (reportMode === 'changed' || reportMode === 'changed-first') {
+        console.info(`Changed pages (>= ${diffThresholdPct.toFixed(2)}%):`);
+        const changedLines = results.map(renderChangedResult).filter(Boolean) as string[];
+        if (changedLines.length === 0) {
             console.info('- none');
         } else {
-            for (const line of brokenLines) {
+            for (const line of changedLines) {
                 console.info(line);
             }
         }
     }
 
-    if (reportMode === 'all' || reportMode === 'broken-first') {
+    if (reportMode === 'all' || reportMode === 'changed-first') {
         console.info('All pages:');
         const allLines = results.map(renderPageResult).filter(Boolean) as string[];
         for (const line of allLines) {

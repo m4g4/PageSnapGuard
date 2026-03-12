@@ -78,7 +78,12 @@ export async function mergeImages(imagePaths: string[], outputFile: string) {
     await mergedImage.composite(compositeOperations).png().toFile(outputFile);
 }
 
-export function compareScreenshots(newImagePath: string, baselineImagePath: string, diffImagePath: string): number {
+export type CompareScreenshotsResult = {
+    differencePct: number,
+    diffPng?: Buffer
+}
+
+export function compareScreenshots(newImagePath: string, baselineImagePath: string): CompareScreenshotsResult {
     const img1 = PNG.sync.read(fs.readFileSync(newImagePath));
     const img2 = PNG.sync.read(fs.readFileSync(baselineImagePath));
     const { width: img1Width, height: img1Height } = img1;
@@ -87,7 +92,7 @@ export function compareScreenshots(newImagePath: string, baselineImagePath: stri
     if (img1Width !== img2Width || img1Height !== img2Height) {
         const diffPixels = Math.abs(img1Width - img2Width) * Math.abs(img1Height - img2Height);
         const total = img1Width * img1Height;
-        return (diffPixels / total) * 100;
+        return { differencePct: (diffPixels / total) * 100 };
     }
 
     const width = img1Width, height = img1Height;
@@ -95,7 +100,9 @@ export function compareScreenshots(newImagePath: string, baselineImagePath: stri
     const diff = new PNG({ width, height });
     const numDiffPixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
     
-    fs.writeFileSync(diffImagePath, PNG.sync.write(diff));
-    
-    return (numDiffPixels / (width * height)) * 100;
+    const diffPng = PNG.sync.write(diff);
+    return {
+        differencePct: (numDiffPixels / (width * height)) * 100,
+        diffPng
+    };
 }

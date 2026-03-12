@@ -16,11 +16,13 @@
     "diffDir": "./screenshots/diffs/",
     "updateBaseline": false,
     "diffTresholdPct": 1,
-    "reportMode": "broken-first",
+    "reportMode": "changed",
+    "saveDiffs": "changed",
     "browserPoolCount": 3,
     "viewPort": { "width": 1280, "height": 840 },
     "pages": [
       {
+        "name": "Login flow - variant A",
         "path": "login_page",
         "actions": [
           { "name": "wait", "value": "#login-form" }, 

@@ -22,7 +22,8 @@ export type ConfigType = {
     diffDir: string,
     updateBaseline?: boolean,
     diffTresholdPct: number,
-    reportMode?: 'all' | 'broken' | 'broken-first',
+    reportMode?: 'all' | 'changed' | 'changed-first',
+    saveDiffs?: 'all' | 'changed' | 'none',
     pages: PageConfigurationType[],
     viewPort: ViewPortType,
     browserPoolCount: number
@@ -34,11 +35,13 @@ export type UrlPathType = string;
 
 export type DynamicPageConfigType = {
     path: string,
+    name?: string,
     actions: ActionType[]
 }
 
 export type CrawlPageConfigType = {
     path: string,
+    name?: string,
     crawl: boolean
 }
 

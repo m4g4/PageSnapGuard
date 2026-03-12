@@ -92,6 +92,7 @@ PageSnapGuard uses a JSON-based configuration to define the actions that should 
   - `what`: A string representing the text to type into the input field.
 - **`ScreenshotActionValueType`**: A string representing a screenshot ID. This will save the screenshot with this ID.
 - **Crawl Page Entry**: An object with `path` and `"crawl": true` that discovers linked pages under `baseUrl`.
+- **Optional `name`**: For object entries, you can add `"name"` to label the run output (useful when testing the same path with different actions).
 
 ### Example Configuration
 
@@ -116,10 +117,12 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "diffDir": "./screenshots/diffs/",
   "updateBaseline": false,
   "diffTresholdPct": 1,
-  "reportMode": "broken-first",
+  "reportMode": "changed-first",
+  "saveDiffs": "changed",
   "viewPort": { "width": 1280, "height": 840 },
   "pages": [
     {
+      "name": "Login flow - variant A",
       "path": "login_page",
       "actions": [
         { "name": "wait", "value": "#login-form" }, 
@@ -138,12 +141,17 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 }
 ```
 
-`diffTresholdPct` controls which pages are considered "broken" (visually changed). Pages with a difference percentage below the threshold are treated as OK. Set it to `0` to treat any difference as broken.
+`diffTresholdPct` controls which pages are considered "changed" (visually changed). Pages with a difference percentage below the threshold are treated as OK. Set it to `0` to treat any difference as changed.
 
 `reportMode` controls what gets printed:
 - `all`: print every tested page.
-- `broken`: print only pages with diff >= `diffTresholdPct`.
-- `broken-first`: print broken pages first, then all pages.
+- `changed`: print only pages with diff >= `diffTresholdPct`.
+- `changed-first`: print changed pages first, then all pages.
+
+`saveDiffs` controls which diff images are written:
+- `all`: save a diff image for every compared page.
+- `changed`: save diffs only for pages with diff >= `diffTresholdPct`.
+- `none`: never save diff images.
 
 ### Browser Configuration
 

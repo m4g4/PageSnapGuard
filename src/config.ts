@@ -25,7 +25,8 @@ const defaultConfig: Partial<ConfigType> = ({
     globalSelectorTimeoutMs: 10000,
     crawlMaxPages: 500,
     crawlRequestTimeoutMs: 15000,
-    reportMode: 'all'
+    reportMode: 'changed',
+    saveDiffs: 'changed'
 })
 
 export function prepareConfig(cfg: ConfigType): ConfigType {
