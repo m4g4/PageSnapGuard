@@ -166,10 +166,12 @@ function prepareOutputDirectories() {
         pruneStaleBaselineFiles();
     }
 
-    if (visualDiffPages.length > 0) {
-        console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: ${visualDiffPages.length}`);
-    } else {
-        console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: 0`);
+    if (reportMode === 'all') {
+        if (visualDiffPages.length > 0) {
+            console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: ${visualDiffPages.length}`);
+        } else {
+            console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: 0`);
+        }
     }
 
     console.info(`Page processing summary: success=${succeededPages}, failed=${failedPages.length}, total=${results.length}`);

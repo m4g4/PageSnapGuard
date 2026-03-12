@@ -35,11 +35,13 @@ const toScreenshotFileName = (rawName: string): string => {
         // Drop template-style placeholders if they somehow leak into the path
         .replace(/\{\{[^}]+\}\}/g, '')
         .replace(/^\/+|\/+$/g, '')
+        // Replace path separators to keep screenshots in a single folder
+        .replace(/\//g, '_')
         .replace(/[?#]/g, '_')
         .replace(/[&=]/g, '_')
         .replace(/[<>:"\\|*]+/g, '_')
         .replace(/\s+/g, '_')
-        .replace(/\/{2,}/g, '/');
+        .replace(/_+/g, '_');
 
     return normalized || 'root';
 }
