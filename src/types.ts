@@ -22,6 +22,7 @@ export type ConfigType = {
     diffDir: string,
     updateBaseline?: boolean,
     diffTresholdPct: number,
+    reportMode?: 'all' | 'broken' | 'broken-first',
     pages: PageConfigurationType[],
     viewPort: ViewPortType,
     browserPoolCount: number

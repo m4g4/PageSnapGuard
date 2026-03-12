@@ -116,6 +116,7 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "diffDir": "./screenshots/diffs/",
   "updateBaseline": false,
   "diffTresholdPct": 1,
+  "reportMode": "broken-first",
   "viewPort": { "width": 1280, "height": 840 },
   "pages": [
     {
@@ -136,6 +137,13 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   ]
 }
 ```
+
+`diffTresholdPct` controls which pages are considered "broken" (visually changed). Pages with a difference percentage below the threshold are treated as OK. Set it to `0` to treat any difference as broken.
+
+`reportMode` controls what gets printed:
+- `all`: print every tested page.
+- `broken`: print only pages with diff >= `diffTresholdPct`.
+- `broken-first`: print broken pages first, then all pages.
 
 ### Browser Configuration
 

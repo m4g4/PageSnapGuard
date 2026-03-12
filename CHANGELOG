@@ -1,10 +1,17 @@
 # Changelog
 
+## [2.2.0] - 2026-03-12
+
+### Added
+- Configurable report mode (`reportMode`) to control whether all pages, only broken pages, or broken-first output is printed.
+
+### Changed
+- Page results output now supports broken-first reporting and respects the configured diff threshold when listing broken pages.
+
 ## [2.1.1] - 2026-03-11
 
 ### Changed
 - Clicking now forces interaction even when elements are not visible to improve reliability.
-
 
 ## [2.1.0] - 2026-03-01
 

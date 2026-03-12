@@ -16,6 +16,7 @@
     "diffDir": "./screenshots/diffs/",
     "updateBaseline": false,
     "diffTresholdPct": 1,
+    "reportMode": "broken-first",
     "browserPoolCount": 3,
     "viewPort": { "width": 1280, "height": 840 },
     "pages": [

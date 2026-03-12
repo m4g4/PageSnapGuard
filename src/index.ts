@@ -93,15 +93,61 @@ function prepareOutputDirectories() {
 
     const failedPages = results.filter(r => !r.success);
     const succeededPages = results.length - failedPages.length;
-    console.info('Page results:');
-    for (const result of results) {
-        if (result.success) {
-            const differencePct = typeof result.differencePct === 'number'
-                ? `${result.differencePct.toFixed(2)}%`
-                : 'n/a';
-            console.info(`- ${result.pageUrl}: ${differencePct}`);
+    const diffThresholdPct = getConfig().diffTresholdPct ?? 0;
+    const reportMode = getConfig().reportMode ?? 'all';
+    const visualDiffPages = results.filter(r =>
+        r.success &&
+        typeof r.differencePct === 'number' &&
+        r.differencePct >= diffThresholdPct
+    );
+
+    const renderPageResult = (result: PageProcessResult): string | null => {
+        if (!result.success) {
+            return `- ${result.pageUrl}: failed (${result.error})`;
+        }
+
+        if (typeof result.differencePct !== 'number') {
+            return `- ${result.pageUrl}: n/a`;
+        }
+
+        return `- ${result.pageUrl}: ${result.differencePct.toFixed(2)}%`;
+    };
+
+    const renderBrokenResult = (result: PageProcessResult): string | null => {
+        if (!result.success) {
+            return null;
+        }
+
+        if (typeof result.differencePct !== 'number') {
+            return null;
+        }
+
+        if (result.differencePct < diffThresholdPct) {
+            return null;
+        }
+
+        return `- ${result.pageUrl}: ${result.differencePct.toFixed(2)}%`;
+    };
+
+    console.info(`Diff threshold: ${diffThresholdPct.toFixed(2)}%`);
+
+    if (reportMode === 'broken' || reportMode === 'broken-first') {
+        console.info(`Broken pages (>= ${diffThresholdPct.toFixed(2)}%):`);
+        const brokenLines = results.map(renderBrokenResult).filter(Boolean) as string[];
+        if (brokenLines.length === 0) {
+            console.info('- none');
         } else {
-            console.info(`- ${result.pageUrl}: failed (${result.error})`);
+            for (const line of brokenLines) {
+                console.info(line);
+            }
+        }
+    }
+
+    if (reportMode === 'all' || reportMode === 'broken-first') {
+        console.info('All pages:');
+        const allLines = results.map(renderPageResult).filter(Boolean) as string[];
+        for (const line of allLines) {
+            console.info(line);
         }
     }
 
@@ -118,6 +164,12 @@ function prepareOutputDirectories() {
 
     if (getConfig().updateBaseline) {
         pruneStaleBaselineFiles();
+    }
+
+    if (visualDiffPages.length > 0) {
+        console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: ${visualDiffPages.length}`);
+    } else {
+        console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: 0`);
     }
 
     console.info(`Page processing summary: success=${succeededPages}, failed=${failedPages.length}, total=${results.length}`);
