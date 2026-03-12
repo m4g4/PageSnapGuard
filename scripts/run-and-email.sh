@@ -182,6 +182,7 @@ render_html_template() {
   local template="$1"
   local extra_html="$2"
   local escaped_host escaped_config escaped_exit escaped_status escaped_status_class escaped_log_file escaped_output
+  local safe_host safe_config safe_exit safe_status safe_status_class safe_log_file safe_output safe_extra_html
 
   escaped_host="$(printf '%s' "$HOSTNAME_VALUE" | escape_html)"
   escaped_config="$(printf '%s' "$CONFIG_FILE" | escape_html)"
@@ -194,14 +195,30 @@ render_html_template() {
   escaped_log_file="$(printf '%s' "$LOG_FILE" | escape_html)"
   escaped_output="$(printf '%s' "$LOG_CONTENT" | escape_html)"
 
-  template="${template//\{\{HOST\}\}/$escaped_host}"
-  template="${template//\{\{CONFIG\}\}/$escaped_config}"
-  template="${template//\{\{EXIT_CODE\}\}/$escaped_exit}"
-  template="${template//\{\{STATUS\}\}/$escaped_status}"
-  template="${template//\{\{STATUS_CLASS\}\}/$escaped_status_class}"
-  template="${template//\{\{LOG_FILE\}\}/$escaped_log_file}"
-  template="${template//\{\{RUN_OUTPUT\}\}/$escaped_output}"
-  template="${template//\{\{EXTRA_HTML\}\}/$extra_html}"
+  escape_replacement() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//&/\\&}"
+    printf '%s' "$value"
+  }
+
+  safe_host="$(escape_replacement "$escaped_host")"
+  safe_config="$(escape_replacement "$escaped_config")"
+  safe_exit="$(escape_replacement "$escaped_exit")"
+  safe_status="$(escape_replacement "$escaped_status")"
+  safe_status_class="$(escape_replacement "$escaped_status_class")"
+  safe_log_file="$(escape_replacement "$escaped_log_file")"
+  safe_output="$(escape_replacement "$escaped_output")"
+  safe_extra_html="$(escape_replacement "$extra_html")"
+
+  template="${template//\{\{HOST\}\}/$safe_host}"
+  template="${template//\{\{CONFIG\}\}/$safe_config}"
+  template="${template//\{\{EXIT_CODE\}\}/$safe_exit}"
+  template="${template//\{\{STATUS\}\}/$safe_status}"
+  template="${template//\{\{STATUS_CLASS\}\}/$safe_status_class}"
+  template="${template//\{\{LOG_FILE\}\}/$safe_log_file}"
+  template="${template//\{\{RUN_OUTPUT\}\}/$safe_output}"
+  template="${template//\{\{EXTRA_HTML\}\}/$safe_extra_html}"
   printf '%s' "$template"
 }
 

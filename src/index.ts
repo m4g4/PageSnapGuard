@@ -63,8 +63,8 @@ function prepareOutputDirectories() {
     }
 
     console.info('PageSnapGuard started...');
-    console.info(`Config: ${path.resolve(argv.config)}`);
     if (getConfig().verbose) {
+        console.info(`Config: ${path.resolve(argv.config)}`);
         console.info(`Browser: ${getConfig().browser}, Headless: ${getConfig().headless}, Pages: ${getConfig().pages.length}, Update baseline: ${getConfig().updateBaseline}, Verbose: ${getConfig().verbose}`);
         console.info(`Navigation: waitUntil=${getConfig().gotoWaitUntil}, navTimeout=${getConfig().navigationTimeoutMs}ms, selectorTimeout=${getConfig().globalSelectorTimeoutMs}ms`);
     }
