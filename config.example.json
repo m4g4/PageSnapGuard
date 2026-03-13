@@ -36,7 +36,9 @@
       },
       {
         "path": "",
-        "crawl": true
+        "crawl": true,
+        "includePathPattern": "contact/*",
+        "excludePathPattern": "contact/version/*"
       }
     ]
   }

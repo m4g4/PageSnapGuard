@@ -136,7 +136,9 @@ Here's an example of how to set up a sequence of actions in the configuration fi
     },
     {
       "path": "",
-      "crawl": true
+      "crawl": true,
+      "includePathPattern": "contact/*",
+      "excludePathPattern": "contact/version/*"
     }
   ]
 }
@@ -191,6 +193,10 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 - Crawler follows only links under your configured `baseUrl`.
 - `"crawlMaxPages"`: maximum pages discovered per crawl seed (default `500`).
 - `"crawlRequestTimeoutMs"`: timeout per crawled page request (default `15000`).
+- Crawl entries in `pages` can optionally define:
+- `"includePathPattern"`: string or array of glob patterns to include when expanding that crawl seed.
+- `"excludePathPattern"`: string or array of glob patterns to exclude for that crawl seed.
+- Glob patterns support `*` (any characters) and `?` (single character). Examples: `"blog/*"`, `"docs/??/intro"`, `"*utm=*"`
 
 ### Baseline Update
 

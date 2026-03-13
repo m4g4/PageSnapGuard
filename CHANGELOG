@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.2.1] - 2026-03-13
+
+### Added
+- Per-crawl include/exclude path patterns (`includePathPattern`, `excludePathPattern`) to filter discovered URLs.
+
 ## [2.2.0] - 2026-03-12
 
 ### Added

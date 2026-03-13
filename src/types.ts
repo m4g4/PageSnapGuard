@@ -43,7 +43,9 @@ export type DynamicPageConfigType = {
 export type CrawlPageConfigType = {
     path: string,
     name?: string,
-    crawl: boolean
+    crawl: boolean,
+    includePathPattern?: string | string[],
+    excludePathPattern?: string | string[]
 }
 
 export type PageConfigurationType  = DynamicPageConfigType | CrawlPageConfigType | UrlPathType;

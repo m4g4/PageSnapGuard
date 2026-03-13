@@ -178,8 +178,16 @@ export async function expandCrawlPages(config: ConfigType): Promise<PageConfigur
 
         const crawledPages = await crawlPagesFromSeed(baseUrl, page.path, crawlMaxPages, crawlRequestTimeoutMs);
         console.info(`Crawl loaded from '${page.path}': ${crawledPages.length} page(s)`);
+        const includePatterns = toPatternList(page.includePathPattern);
+        const excludePatterns = toPatternList(page.excludePathPattern);
 
         for (const crawledPage of crawledPages) {
+            if (includePatterns.length > 0 && !matchesAnyPattern(crawledPage, includePatterns)) {
+                continue;
+            }
+            if (excludePatterns.length > 0 && matchesAnyPattern(crawledPage, excludePatterns)) {
+                continue;
+            }
             if (existingPathPages.has(crawledPage)) {
                 continue;
             }
@@ -190,6 +198,23 @@ export async function expandCrawlPages(config: ConfigType): Promise<PageConfigur
     }
 
     return expandedPages;
+}
+
+function toPatternList(value?: string | string[]): string[] {
+    if (!value) {
+        return [];
+    }
+    return Array.isArray(value) ? value : [value];
+}
+
+function matchesAnyPattern(value: string, patterns: string[]): boolean {
+    return patterns.some((pattern) => globMatch(value, pattern));
+}
+
+function globMatch(value: string, pattern: string): boolean {
+    const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    const regexPattern = `^${escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.')}$`;
+    return new RegExp(regexPattern).test(value);
 }
 
 /**
