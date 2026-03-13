@@ -157,26 +157,41 @@ const processPageSafely = async (config: PageConfigurationType): Promise<PagePro
     const pageUrl = toPageLabel(config);
     logVerbose(`Page started: ${pageUrl}`);
 
-    try {
-        let differencePct: number | undefined;
-        if (isUrlPathType(config)) {
-            differencePct = await processUrlPathPage(config);
-        } else if (isCrawlPageConfigType(config)) {
-            differencePct = await processUrlPathPage(config.path);
-        } else {
-            differencePct = await processDynamicPage(config);
-        }
+    const maxAttempts = Math.max(1, getConfig().retryFailedPages ?? 3);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            let differencePct: number | undefined;
+            if (isUrlPathType(config)) {
+                differencePct = await processUrlPathPage(config);
+            } else if (isCrawlPageConfigType(config)) {
+                differencePct = await processUrlPathPage(config.path);
+            } else {
+                differencePct = await processDynamicPage(config);
+            }
 
-        logVerbose(`Page finished: ${pageUrl}`);
-        return { pageUrl, success: true, differencePct };
-    } catch (error) {
-        logVerbose(`Page failed: ${pageUrl} - ${toErrorMessage(error)}`);
-        return {
-            pageUrl,
-            success: false,
-            error: toErrorMessage(error)
-        };
+            logVerbose(`Page finished: ${pageUrl}`);
+            return { pageUrl, success: true, differencePct };
+        } catch (error) {
+            const errorMessage = toErrorMessage(error);
+            if (attempt < maxAttempts) {
+                logVerbose(`Page failed (attempt ${attempt}/${maxAttempts}): ${pageUrl} - ${errorMessage}. Retrying...`);
+                continue;
+            }
+
+            logVerbose(`Page failed: ${pageUrl} - ${errorMessage}`);
+            return {
+                pageUrl,
+                success: false,
+                error: errorMessage
+            };
+        }
     }
+
+    return {
+        pageUrl,
+        success: false,
+        error: 'Unknown retry failure'
+    };
 }
 
 export const processPages = (): Promise<PageProcessResult>[] => {

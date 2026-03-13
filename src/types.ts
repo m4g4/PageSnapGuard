@@ -24,6 +24,7 @@ export type ConfigType = {
     diffTresholdPct: number,
     reportMode?: 'all' | 'changed' | 'changed-first',
     saveDiffs?: 'all' | 'changed' | 'none',
+    retryFailedPages?: number,
     pages: PageConfigurationType[],
     viewPort: ViewPortType,
     browserPoolCount: number

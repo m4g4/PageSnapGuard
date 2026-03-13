@@ -5,6 +5,7 @@
 ### Added
 - Configurable report mode (`reportMode`) to control whether all pages, only changed pages, or changed-first output is printed.
 - Configurable diff image saving (`saveDiffs`) to control when diff images are written.
+- Configurable retry count (`retryFailedPages`) for re-running failed page tests.
 
 ### Changed
 - Page results output now supports changed-first reporting and respects the configured diff threshold when listing changed pages.

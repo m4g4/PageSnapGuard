@@ -119,6 +119,7 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "diffTresholdPct": 1,
   "reportMode": "changed-first",
   "saveDiffs": "changed",
+  "retryFailedPages": 3,
   "viewPort": { "width": 1280, "height": 840 },
   "pages": [
     {
@@ -152,6 +153,8 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 - `all`: save a diff image for every compared page.
 - `changed`: save diffs only for pages with diff >= `diffTresholdPct`.
 - `none`: never save diff images.
+
+`retryFailedPages` controls how many attempts are made for a failing page. Minimum is `1` (no retries).
 
 ### Browser Configuration
 

@@ -18,6 +18,7 @@
     "diffTresholdPct": 1,
     "reportMode": "changed",
     "saveDiffs": "changed",
+    "retryFailedPages": 3,
     "browserPoolCount": 3,
     "viewPort": { "width": 1280, "height": 840 },
     "pages": [

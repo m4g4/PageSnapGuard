@@ -26,7 +26,8 @@ const defaultConfig: Partial<ConfigType> = ({
     crawlMaxPages: 500,
     crawlRequestTimeoutMs: 15000,
     reportMode: 'changed',
-    saveDiffs: 'changed'
+    saveDiffs: 'changed',
+    retryFailedPages: 3
 })
 
 export function prepareConfig(cfg: ConfigType): ConfigType {
