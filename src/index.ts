@@ -156,7 +156,9 @@ function prepareOutputDirectories() {
             console.error(`Page failed: ${failedPage.pageUrl} - ${failedPage.error}`);
         }
 
-        console.info(`Page processing summary: success=${succeededPages}, failed=${failedPages.length}, total=${results.length}`);
+        console.info(
+            `Page processing summary: success=${succeededPages}, failed=${failedPages.length}, changed=${visualDiffPages.length}, total=${results.length}`
+        );
         console.error(`PageSnapGuard finished with errors. Failed pages: ${failedPages.length}/${results.length}`);
         process.exitCode = 1;
         return;
@@ -166,14 +168,8 @@ function prepareOutputDirectories() {
         pruneStaleBaselineFiles();
     }
 
-    if (reportMode === 'all') {
-        if (visualDiffPages.length > 0) {
-            console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: ${visualDiffPages.length}`);
-        } else {
-            console.info(`Visual changes >= ${diffThresholdPct.toFixed(2)}%: 0`);
-        }
-    }
-
-    console.info(`Page processing summary: success=${succeededPages}, failed=${failedPages.length}, total=${results.length}`);
+    console.info(
+        `Page processing summary: success=${succeededPages}, failed=${failedPages.length}, changed=${visualDiffPages.length}, total=${results.length}`
+    );
     console.info('PageSnapGuard finished succesfully!');
 })();
