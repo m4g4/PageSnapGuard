@@ -162,9 +162,14 @@ fi
 
 HOSTNAME_VALUE="$(hostname 2>/dev/null || echo unknown-host)"
 DATE_VALUE="$(date -R)"
+LOG_CONTENT="$(cat "$LOG_FILE")"
+
+CHANGED_COUNT="$(printf '%s\n' "$LOG_CONTENT" | awk -F'changed=' '/Page processing summary:/{split($2,a,/[, ]/); print a[1]}' | tail -n 1)"
+if [[ "$RUN_EXIT_CODE" -eq 0 && "$CHANGED_COUNT" =~ ^[0-9]+$ && "$CHANGED_COUNT" -gt 0 ]]; then
+  STATUS_TEXT="CHANGED"
+fi
 
 SUBJECT="${SUBJECT_PREFIX} ${STATUS_TEXT} (exit ${RUN_EXIT_CODE})"
-LOG_CONTENT="$(cat "$LOG_FILE")"
 
 TEXT_BODY="$(cat <<EOF
 Host: $HOSTNAME_VALUE
