@@ -10,6 +10,7 @@ Options:
   --config <file>          Config file passed to PageSnapGuard (required)
   --to <email>             Recipient email address (required)
   --from <email>           From email header (default: pagesnapguard@localhost)
+  --from-name <text>       From display name (default: PageSnapGuard)
   --subject-prefix <text>  Subject prefix (default: PageSnapGuard)
   --log <file>             Log file path (default: /tmp/pagesnapguard-<timestamp>.log)
   --always                 Send email also on success (default: send only on failure)
@@ -31,6 +32,7 @@ EOF
 CONFIG_FILE=""
 TO_EMAIL=""
 FROM_EMAIL="pagesnapguard@localhost"
+FROM_NAME="PageSnapGuard"
 SUBJECT_PREFIX="PageSnapGuard"
 ALWAYS_SEND="false"
 LOG_FILE=""
@@ -50,6 +52,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --from)
       FROM_EMAIL="${2:-}"
+      shift 2
+      ;;
+    --from-name)
+      FROM_NAME="${2:-}"
       shift 2
       ;;
     --subject-prefix)
@@ -172,6 +178,18 @@ $LOG_CONTENT
 EOF
 )"
 
+format_from_header() {
+  local name="$1"
+  local email="$2"
+  if [[ -n "$name" ]]; then
+    printf '%s <%s>' "$name" "$email"
+  else
+    printf '%s' "$email"
+  fi
+}
+
+FROM_HEADER_VALUE="$(format_from_header "$FROM_NAME" "$FROM_EMAIL")"
+
 escape_html() {
   sed -e 's/&/\&amp;/g' \
       -e 's/</\&lt;/g' \
@@ -224,7 +242,7 @@ render_html_template() {
 
 if [[ -z "$HTML_TEMPLATE_FILE" ]]; then
   {
-    printf 'From: %s\n' "$FROM_EMAIL"
+    printf 'From: %s\n' "$FROM_HEADER_VALUE"
     printf 'To: %s\n' "$TO_EMAIL"
     printf 'Subject: %s\n' "$SUBJECT"
     printf 'Date: %s\n' "$DATE_VALUE"
@@ -243,7 +261,7 @@ else
   HTML_BODY="$(render_html_template "$HTML_TEMPLATE_CONTENT" "$HTML_EXTRA_CONTENT")"
 
   {
-    printf 'From: %s\n' "$FROM_EMAIL"
+    printf 'From: %s\n' "$FROM_HEADER_VALUE"
     printf 'To: %s\n' "$TO_EMAIL"
     printf 'Subject: %s\n' "$SUBJECT"
     printf 'Date: %s\n' "$DATE_VALUE"
