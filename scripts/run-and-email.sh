@@ -15,7 +15,7 @@ Options:
   --log <file>             Log file path (default: /tmp/pagesnapguard-<timestamp>.log)
   --always                 Send email also on success (default: send only on failure)
   --html-template <file>   HTML template file for email body (optional)
-  --html-extra <file>      Extra HTML snippet file appended to the HTML body (optional)
+  --html-extra <html>      Extra HTML snippet string appended to the HTML body (optional)
   --verbose, -v            Forward verbose mode to PageSnapGuard
   --update-baseline, -u    Forward baseline update mode to PageSnapGuard
   -h, --help               Show this help
@@ -38,7 +38,7 @@ ALWAYS_SEND="false"
 LOG_FILE=""
 FORWARDED_ARGS=()
 HTML_TEMPLATE_FILE=""
-HTML_EXTRA_FILE=""
+HTML_EXTRA_VALUE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -75,7 +75,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --html-extra)
-      HTML_EXTRA_FILE="${2:-}"
+      HTML_EXTRA_VALUE="${2:-}"
       shift 2
       ;;
     --verbose|-v)
@@ -116,11 +116,6 @@ fi
 
 if [[ -n "$HTML_TEMPLATE_FILE" && ! -f "$HTML_TEMPLATE_FILE" ]]; then
   echo "HTML template file not found: $HTML_TEMPLATE_FILE" >&2
-  exit 2
-fi
-
-if [[ -n "$HTML_EXTRA_FILE" && ! -f "$HTML_EXTRA_FILE" ]]; then
-  echo "HTML extra file not found: $HTML_EXTRA_FILE" >&2
   exit 2
 fi
 
@@ -259,10 +254,7 @@ if [[ -z "$HTML_TEMPLATE_FILE" ]]; then
 else
   BOUNDARY="pagesnapguard-$(date +%s)-$$"
   HTML_TEMPLATE_CONTENT="$(cat "$HTML_TEMPLATE_FILE")"
-  HTML_EXTRA_CONTENT=""
-  if [[ -n "$HTML_EXTRA_FILE" ]]; then
-    HTML_EXTRA_CONTENT="$(cat "$HTML_EXTRA_FILE")"
-  fi
+  HTML_EXTRA_CONTENT="$HTML_EXTRA_VALUE"
   HTML_BODY="$(render_html_template "$HTML_TEMPLATE_CONTENT" "$HTML_EXTRA_CONTENT")"
 
   {
