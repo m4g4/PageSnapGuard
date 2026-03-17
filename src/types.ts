@@ -25,6 +25,7 @@ export type ConfigType = {
     reportMode?: 'all' | 'changed' | 'changed-first',
     saveDiffs?: 'all' | 'changed' | 'none',
     retryFailedPages?: number,
+    pageTimeoutMs?: number,
     pages: PageConfigurationType[],
     viewPort: ViewPortType,
     browserPoolCount: number

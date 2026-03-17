@@ -50,6 +50,28 @@ export function waitForTimeout(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+        return promise;
+    }
+
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+
+        promise
+            .then((value) => {
+                clearTimeout(timer);
+                resolve(value);
+            })
+            .catch((error) => {
+                clearTimeout(timer);
+                reject(error);
+            });
+    });
+}
+
 export function loadConfig(filePath: string): ConfigType {
     const configFilePath = path.resolve(filePath);
     if (!fs.existsSync(configFilePath)) {

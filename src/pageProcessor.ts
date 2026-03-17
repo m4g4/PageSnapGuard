@@ -5,7 +5,7 @@ import { compareScreenshots, takeScreenshot } from './utils/screenshot.js';
 import { ClickActionValueType, CssSelectorType, DynamicPageConfigType, isCrawlPageConfigType, isSelectorWait, isTimeWait, isUrlPathType, PageConfigurationType, ScreenshotActionValueType, TimeMillisValueType, TypeActionValueType, UrlPathType, WaitActionValueType } from './types.js';
 import { getConfig } from './config.js';
 import { url } from './utils/url.js';
-import { waitForTimeout } from './utils/utils.js';
+import { waitForTimeout, withTimeout } from './utils/utils.js';
 
 export type PageUrlType = string | 'url';
 
@@ -153,23 +153,41 @@ const toErrorMessage = (error: unknown): string => {
     return String(error);
 }
 
-const processPageSafely = async (config: PageConfigurationType): Promise<PageProcessResult> => {
+const processPageSafely = async (config: PageConfigurationType, index: number, total: number): Promise<PageProcessResult> => {
     const pageUrl = toPageLabel(config);
+    const pageLabel = `${index + 1}/${total}`;
+    const startedAt = Date.now();
+    console.info(`Processing page ${pageLabel}: ${pageUrl}`);
     logVerbose(`Page started: ${pageUrl}`);
 
     const maxAttempts = Math.max(1, getConfig().retryFailedPages ?? 3);
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
             let differencePct: number | undefined;
+            const pageTimeoutMs = getConfig().pageTimeoutMs ?? 0;
             if (isUrlPathType(config)) {
-                differencePct = await processUrlPathPage(config);
+                differencePct = await withTimeout(
+                    processUrlPathPage(config),
+                    pageTimeoutMs,
+                    `Page ${pageLabel}`
+                );
             } else if (isCrawlPageConfigType(config)) {
-                differencePct = await processUrlPathPage(config.path);
+                differencePct = await withTimeout(
+                    processUrlPathPage(config.path),
+                    pageTimeoutMs,
+                    `Page ${pageLabel}`
+                );
             } else {
-                differencePct = await processDynamicPage(config);
+                differencePct = await withTimeout(
+                    processDynamicPage(config),
+                    pageTimeoutMs,
+                    `Page ${pageLabel}`
+                );
             }
 
             logVerbose(`Page finished: ${pageUrl}`);
+            const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
+            console.info(`Finished page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
             return { pageUrl, success: true, differencePct };
         } catch (error) {
             const errorMessage = toErrorMessage(error);
@@ -179,6 +197,8 @@ const processPageSafely = async (config: PageConfigurationType): Promise<PagePro
             }
 
             logVerbose(`Page failed: ${pageUrl} - ${errorMessage}`);
+            const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
+            console.info(`Failed page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
             return {
                 pageUrl,
                 success: false,
@@ -200,7 +220,7 @@ export const processPages = (): Promise<PageProcessResult>[] => {
 
     const pagePromises: Promise<PageProcessResult>[] = [];
     for (let i = 0; i < getConfig().pages.length; i++) {
-        pagePromises.push(processPageSafely(pageConfig[i]));
+        pagePromises.push(processPageSafely(pageConfig[i], i, pageConfig.length));
     }
 
     return pagePromises;

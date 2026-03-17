@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.3.0] - 2026-03-17
+
+### Added
+- Per-page watchdog timeout (`pageTimeoutMs`, default 5 minutes) to avoid hanging indefinitely.
+- Non-verbose per-page progress logs with elapsed time.
+
+### Changed
+- HTML extra content is now provided as an inline string via `--html-extra` (file-based option removed).
+- `withTimeout` helper moved to shared utils.
+
 ## [2.2.1] - 2026-03-13
 
 ### Added
