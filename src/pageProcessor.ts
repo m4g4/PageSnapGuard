@@ -99,6 +99,15 @@ export const getBrowser = async () => {
 
     logVerbose(`Browser pool exhausted (${getConfig().browserPoolCount}). Waiting for a free browser...`);
 
+    if (browserPool.length > 0) {
+        const browser = browserPool.pop();
+        if (browser === undefined) {
+            throw new Error('Error retrieving free browser!');
+        }
+        logVerbose('Reusing browser from pool.');
+        return browser;
+    }
+
     return new Promise<Browser>((resolve) => {
         waitingQueue.push({
             resolve: () => {

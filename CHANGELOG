@@ -10,6 +10,9 @@
 - HTML extra content is now provided as an inline string via `--html-extra` (file-based option removed).
 - `withTimeout` helper moved to shared utils.
 
+### Fixed
+- Prevented unnecessary waiting when a free browser is already in the pool.
+
 ## [2.2.1] - 2026-03-13
 
 ### Added
