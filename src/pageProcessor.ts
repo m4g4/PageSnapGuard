@@ -329,7 +329,7 @@ export const processDynamicPage = async (pageConfig: DynamicPageConfigType): Pro
                         await waitForTimeout(value as TimeMillisValueType);
                         logVerbose(`Waited ${value}ms`);
                     } else if (isSelectorWait(value as WaitActionValueType)) {
-                        await page.waitForSelector(value as CssSelectorType, { timeout: 10000 });
+                        await page.waitForSelector(value as CssSelectorType, { timeout: getConfig().globalSelectorTimeoutMs });
                         logVerbose(`Waited for element: ${value}`);
                     }
                     break;
