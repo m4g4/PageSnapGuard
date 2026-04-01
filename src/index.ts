@@ -169,7 +169,13 @@ function prepareOutputDirectories() {
     }
 
     console.info(
-        `Page processing summary: success=${succeededPages}, failed=${failedPages.length}, changed=${visualDiffPages.length}, total=${results.length}`
+        `\nPage processing summary:
+------------------------
+    Success: ${succeededPages}
+    Failed:  ${failedPages.length}
+    Changed: ${visualDiffPages.length}
+    Total:   ${results.length}
+------------------------`
     );
-    console.info('PageSnapGuard finished succesfully!');
+    console.info('PageSnapGuard finished successfully!');
 })();

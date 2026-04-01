@@ -166,8 +166,7 @@ const processPageSafely = async (config: PageConfigurationType, index: number, t
     const pageUrl = toPageLabel(config);
     const pageLabel = `${index + 1}/${total}`;
     const startedAt = Date.now();
-    console.info(`Processing page ${pageLabel}: ${pageUrl}`);
-    logVerbose(`Page started: ${pageUrl}`);
+    logVerbose(`Processing page ${pageLabel}: ${pageUrl}`);
 
     const maxAttempts = Math.max(1, getConfig().retryFailedPages ?? 3);
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -194,9 +193,8 @@ const processPageSafely = async (config: PageConfigurationType, index: number, t
                 );
             }
 
-            logVerbose(`Page finished: ${pageUrl}`);
             const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
-            console.info(`Finished page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
+            logVerbose(`Finished page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
             return { pageUrl, success: true, differencePct };
         } catch (error) {
             const errorMessage = toErrorMessage(error);
