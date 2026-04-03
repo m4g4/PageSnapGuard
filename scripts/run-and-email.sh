@@ -146,22 +146,23 @@ RUN_EXIT_CODE=${PIPESTATUS[0]}
 set -e
 
 STATUS_TEXT="FAILED"
-if [[ "$RUN_EXIT_CODE" -eq 0 ]]; then
-  STATUS_TEXT="SUCCESS"
-fi
-
-if [[ "$RUN_EXIT_CODE" -eq 0 && "$ALWAYS_SEND" != "true" ]]; then
-  echo "Run succeeded. Skipping email (use --always to send on success)."
-  exit 0
-fi
-
 HOSTNAME_VALUE="$(hostname 2>/dev/null || echo unknown-host)"
 DATE_VALUE="$(date -R)"
 LOG_CONTENT="$(cat "$LOG_FILE")"
 
-CHANGED_COUNT="$(printf '%s\n' "$LOG_CONTENT" | awk -F'changed=' '/Page processing summary:/{split($2,a,/[, ]/); print a[1]}' | tail -n 1)"
-if [[ "$RUN_EXIT_CODE" -eq 0 && "$CHANGED_COUNT" =~ ^[0-9]+$ && "$CHANGED_COUNT" -gt 0 ]]; then
-  STATUS_TEXT="CHANGED"
+CHANGED_COUNT="$(printf '%s\n' "$LOG_CONTENT" | awk '/Changed:[ ]*[0-9]+/{gsub(/[^0-9]/,"",$2); print $2}' | tail -n 1)"
+
+if [[ "$RUN_EXIT_CODE" -eq 0 ]]; then
+  if [[ "$CHANGED_COUNT" =~ ^[0-9]+$ && "$CHANGED_COUNT" -gt 0 ]]; then
+    STATUS_TEXT="CHANGED"
+  else
+    STATUS_TEXT="SUCCESS"
+  fi
+fi
+
+if [[ "$RUN_EXIT_CODE" -eq 0 && "$STATUS_TEXT" == "SUCCESS" && "$ALWAYS_SEND" != "true" ]]; then
+  echo "Run succeeded. Skipping email (use --always to send on success)."
+  exit 0
 fi
 
 SUBJECT="${SUBJECT_PREFIX} ${STATUS_TEXT}"
