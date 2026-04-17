@@ -155,13 +155,6 @@ function prepareOutputDirectories() {
         for (const failedPage of failedPages) {
             console.error(`Page failed: ${failedPage.pageUrl} - ${failedPage.error}`);
         }
-
-        console.info(
-            `Page processing summary: success=${succeededPages}, failed=${failedPages.length}, changed=${visualDiffPages.length}, total=${results.length}`
-        );
-        console.error(`PageSnapGuard finished with errors. Failed pages: ${failedPages.length}/${results.length}`);
-        process.exitCode = 1;
-        return;
     }
 
     if (getConfig().updateBaseline) {
@@ -177,5 +170,11 @@ function prepareOutputDirectories() {
     Total:   ${results.length}
 ------------------------`
     );
+
+    if (failedPages.length > 0) {
+        console.error(`PageSnapGuard finished with errors.`);
+        process.exitCode = 1;
+    }
+
     console.info('PageSnapGuard finished successfully!');
 })();
