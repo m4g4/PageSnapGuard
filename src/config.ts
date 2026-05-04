@@ -28,6 +28,7 @@ const defaultConfig: Partial<ConfigType> = ({
     reportMode: 'changed',
     saveDiffs: 'changed',
     retryFailedPages: 3,
+    failedSleepTimeMs: 0,
     pageTimeoutMs: 300000
 })
 

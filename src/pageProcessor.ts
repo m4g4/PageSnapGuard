@@ -199,6 +199,11 @@ const processPageSafely = async (config: PageConfigurationType, index: number, t
         } catch (error) {
             const errorMessage = toErrorMessage(error);
             if (attempt < maxAttempts) {
+                const sleepTimeMs = getConfig().failedSleepTimeMs ?? 0;
+                if (sleepTimeMs > 0) {
+                    logVerbose(`Sleeping ${sleepTimeMs}ms before retry...`);
+                    await waitForTimeout(sleepTimeMs);
+                }
                 logVerbose(`Page failed (attempt ${attempt}/${maxAttempts}): ${pageUrl} - ${errorMessage}. Retrying...`);
                 continue;
             }

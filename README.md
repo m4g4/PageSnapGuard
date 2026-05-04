@@ -119,8 +119,9 @@ Here's an example of how to set up a sequence of actions in the configuration fi
   "diffTresholdPct": 1,
   "reportMode": "changed-first",
   "saveDiffs": "changed",
-  "retryFailedPages": 3,
-  "viewPort": { "width": 1280, "height": 840 },
+    "retryFailedPages": 3,
+    "failedSleepTimeMs": 0,
+    "viewPort": { "width": 1280, "height": 840 },
   "pages": [
     {
       "name": "Login flow - variant A",
@@ -157,6 +158,8 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 - `none`: never save diff images.
 
 `retryFailedPages` controls how many attempts are made for a failing page. Minimum is `1` (no retries).
+
+`failedSleepTimeMs` controls how long to wait (in milliseconds) between retry attempts for failed pages. Default is `0` (no delay). Increase this if you experience transient failures where pages work in browser but fail during automated capture.
 
 ### Browser Configuration
 
