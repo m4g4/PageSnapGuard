@@ -161,6 +161,10 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 
 `failedSleepTimeMs` controls how long to wait (in milliseconds) between retry attempts for failed pages. Default is `0` (no delay). Increase this if you experience transient failures where pages work in browser but fail during automated capture.
 
+`captureFailedPage` controls whether to take a screenshot when a page fails after all retry attempts. Default is `false`. When enabled, a screenshot of the failed page will be saved to the directory specified by `failedScreenshotDir`.
+
+`failedScreenshotDir` specifies the directory where screenshots of failed pages should be saved. Default is `"./screenshots/failed/"`. The directory will be created automatically if it doesn't exist. Each screenshot filename includes a timestamp to avoid collisions.
+
 ### Browser Configuration
 
 - `"browser"`: `"chrome"` (default), `"firefox"`, or `"firefox-esr"`.

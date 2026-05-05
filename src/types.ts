@@ -27,6 +27,8 @@ export type ConfigType = {
     retryFailedPages?: number,
     failedSleepTimeMs?: number,
     pageTimeoutMs?: number,
+    captureFailedPage?: boolean,
+    failedScreenshotDir?: string,
     pages: PageConfigurationType[],
     viewPort: ViewPortType,
     browserPoolCount: number

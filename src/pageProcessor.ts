@@ -160,7 +160,29 @@ const toErrorMessage = (error: unknown): string => {
     }
 
     return String(error);
-}
+};
+
+const takeFailedPageScreenshot = async (page: Page, pageUrl: PageUrlType): Promise<void> => {
+    try {
+        const safePageUrl = String(pageUrl)
+            .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+            .replace(/\s+/g, '_')
+            .substring(0, 100);
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `failed_${safePageUrl}_${timestamp}`;
+        const failedScreenshotDir = getConfig().failedScreenshotDir ?? './screenshots/failed/';
+        const filePath = path.join(failedScreenshotDir, `${fileName}.png`);
+
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        await page.screenshot({ path: filePath, fullPage: true });
+        
+        logVerbose(`Failed page screenshot saved to: ${filePath}`);
+    } catch (error) {
+        logVerbose(`Error taking failed page screenshot: ${toErrorMessage(error)}`);
+        throw error;
+    }
+};
 
 const processPageSafely = async (config: PageConfigurationType, index: number, total: number): Promise<PageProcessResult> => {
     const pageUrl = toPageLabel(config);
@@ -168,62 +190,86 @@ const processPageSafely = async (config: PageConfigurationType, index: number, t
     const startedAt = Date.now();
     logVerbose(`Processing page ${pageLabel}: ${pageUrl}`);
 
-    const maxAttempts = Math.max(1, getConfig().retryFailedPages ?? 3);
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-            let differencePct: number | undefined;
-            const pageTimeoutMs = getConfig().pageTimeoutMs ?? 0;
-            if (isUrlPathType(config)) {
-                differencePct = await withTimeout(
-                    processUrlPathPage(config),
-                    pageTimeoutMs,
-                    `Page ${pageLabel}`
-                );
-            } else if (isCrawlPageConfigType(config)) {
-                differencePct = await withTimeout(
-                    processUrlPathPage(config.path),
-                    pageTimeoutMs,
-                    `Page ${pageLabel}`
-                );
-            } else {
-                differencePct = await withTimeout(
-                    processDynamicPage(config),
-                    pageTimeoutMs,
-                    `Page ${pageLabel}`
-                );
-            }
+    const browser = await getBrowser();
 
-            const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
-            logVerbose(`Finished page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
-            return { pageUrl, success: true, differencePct };
-        } catch (error) {
-            const errorMessage = toErrorMessage(error);
-            if (attempt < maxAttempts) {
-                const sleepTimeMs = getConfig().failedSleepTimeMs ?? 0;
-                if (sleepTimeMs > 0) {
-                    logVerbose(`Sleeping ${sleepTimeMs}ms before retry...`);
-                    await waitForTimeout(sleepTimeMs);
+    try {
+        const maxAttempts = Math.max(1, getConfig().retryFailedPages ?? 3);
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            let page: Page | undefined;
+
+            try {
+                page = await browser.newPage();
+                let differencePct: number | undefined;
+                const pageTimeoutMs = getConfig().pageTimeoutMs ?? 0;
+                if (isUrlPathType(config)) {
+                    differencePct = await withTimeout(
+                        processUrlPathPage(page, config),
+                        pageTimeoutMs,
+                        `Page ${pageLabel}`
+                    );
+                } else if (isCrawlPageConfigType(config)) {
+                    differencePct = await withTimeout(
+                        processUrlPathPage(page, config.path),
+                        pageTimeoutMs,
+                        `Page ${pageLabel}`
+                    );
+                } else {
+                    differencePct = await withTimeout(
+                        processDynamicPage(page, config),
+                        pageTimeoutMs,
+                        `Page ${pageLabel}`
+                    );
                 }
-                logVerbose(`Page failed (attempt ${attempt}/${maxAttempts}): ${pageUrl} - ${errorMessage}. Retrying...`);
-                continue;
+
+                const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
+                logVerbose(`Finished page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
+                return { pageUrl, success: true, differencePct };
+            } catch (error) {
+                const errorMessage = toErrorMessage(error);
+                if (attempt < maxAttempts) {
+                    const sleepTimeMs = getConfig().failedSleepTimeMs ?? 0;
+                    if (sleepTimeMs > 0) {
+                        logVerbose(`Sleeping ${sleepTimeMs}ms before retry...`);
+                        await waitForTimeout(sleepTimeMs);
+                    }
+                    logVerbose(`Page failed (attempt ${attempt}/${maxAttempts}): ${pageUrl} - ${errorMessage}. Retrying...`);
+                    continue;
+                }
+
+                logVerbose(`Page failed: ${pageUrl} - ${errorMessage}`);
+                const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
+                console.info(`Failed page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
+                
+                if (getConfig().captureFailedPage && page) {
+                    try {
+                        await takeFailedPageScreenshot(page, pageUrl);
+                    } catch (screenshotError) {
+                        logVerbose(`Failed to take screenshot of failed page: ${toErrorMessage(screenshotError)}`);
+                    }
+                }
+
+                return {
+                    pageUrl,
+                    success: false,
+                    error: errorMessage
+                };
+            } finally {
+                if (page) {
+                    await page.close().catch((error) => {
+                        logVerbose(`Failed to close page ${pageLabel}: ${toErrorMessage(error)}`);
+                    });
+                }
             }
-
-            logVerbose(`Page failed: ${pageUrl} - ${errorMessage}`);
-            const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
-            console.info(`Failed page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
-            return {
-                pageUrl,
-                success: false,
-                error: errorMessage
-            };
         }
-    }
 
-    return {
-        pageUrl,
-        success: false,
-        error: 'Unknown retry failure'
-    };
+        return {
+            pageUrl,
+            success: false,
+            error: 'Unknown retry failure'
+        };
+    } finally {
+        returnBrowserToPool(browser);
+    }
 }
 
 export const processPages = (): Promise<PageProcessResult>[] => {
@@ -277,89 +323,76 @@ export const pruneStaleBaselineFiles = () => {
     }
 }
 
-export const processUrlPathPage = async (pageConfig: UrlPathType): Promise<number | undefined> => {
-    const browser = await getBrowser();
+export const processUrlPathPage = async (page: Page, pageConfig: UrlPathType): Promise<number | undefined> => {
+    const targetUrl = url(getConfig().baseUrl, pageConfig);
+    logVerbose(`Opening page: ${targetUrl}`);
 
-    try {
-        const page = await browser.newPage();
-        const targetUrl = url(getConfig().baseUrl, pageConfig);
-        logVerbose(`Opening page: ${targetUrl}`);
+    logVerbose(`Navigating with waitUntil=${getConfig().gotoWaitUntil}, timeout=${getConfig().navigationTimeoutMs}ms`);
+    await page.goto(targetUrl, { waitUntil: getConfig().gotoWaitUntil, timeout: getConfig().navigationTimeoutMs });
+    logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}, timeout=${getConfig().globalSelectorTimeoutMs}ms`);
+    await page.waitForSelector(getConfig().globalSelector, { timeout: getConfig().globalSelectorTimeoutMs });
 
-        logVerbose(`Navigating with waitUntil=${getConfig().gotoWaitUntil}, timeout=${getConfig().navigationTimeoutMs}ms`);
-        await page.goto(targetUrl, { waitUntil: getConfig().gotoWaitUntil, timeout: getConfig().navigationTimeoutMs });
-        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}, timeout=${getConfig().globalSelectorTimeoutMs}ms`);
-        await page.waitForSelector(getConfig().globalSelector, { timeout: getConfig().globalSelectorTimeoutMs });
+    const screenshotId = isHttpUrl(pageConfig)
+        ? `${new URL(targetUrl).pathname}${new URL(targetUrl).search}`
+            .replace(/^\/+/, '')
+            .replace(/[^\w.-]+/g, '_') || 'root'
+        : pageConfig;
 
-        const screenshotId = isHttpUrl(pageConfig)
-            ? `${new URL(targetUrl).pathname}${new URL(targetUrl).search}`
-                .replace(/^\/+/, '')
-                .replace(/[^\w.-]+/g, '_') || 'root'
-            : pageConfig;
-
-        logVerbose(`Taking root screenshot for: ${screenshotId || 'root'}`);
-        return await processScreenshot(page, screenshotId);
-
-    } finally {
-        returnBrowserToPool(browser);
-    }
+    logVerbose(`Taking root screenshot for: ${screenshotId || 'root'}`);
+    return await processScreenshot(page, screenshotId);
 }
 
-export const processDynamicPage = async (pageConfig: DynamicPageConfigType): Promise<number | undefined> => {
-    const browser = await getBrowser();
+export const processDynamicPage = async (page: Page, pageConfig: DynamicPageConfigType): Promise<number | undefined> => {
     let maxDifferencePct: number | undefined;
     
-    try {
-        const page = await browser.newPage();
-        const targetUrl = url(getConfig().baseUrl, pageConfig.path);
-        logVerbose(`Opening dynamic page: ${targetUrl}`);
+    const targetUrl = url(getConfig().baseUrl, pageConfig.path);
+    logVerbose(`Opening dynamic page: ${targetUrl}`);
 
-        logVerbose(`Navigating with waitUntil=${getConfig().gotoWaitUntil}, timeout=${getConfig().navigationTimeoutMs}ms`);
-        await page.goto(targetUrl, { waitUntil: getConfig().gotoWaitUntil, timeout: getConfig().navigationTimeoutMs });
-        logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}, timeout=${getConfig().globalSelectorTimeoutMs}ms`);
-        await page.waitForSelector(getConfig().globalSelector, { timeout: getConfig().globalSelectorTimeoutMs });
+    logVerbose(`Navigating with waitUntil=${getConfig().gotoWaitUntil}, timeout=${getConfig().navigationTimeoutMs}ms`);
+    await page.goto(targetUrl, { waitUntil: getConfig().gotoWaitUntil, timeout: getConfig().navigationTimeoutMs });
+    logVerbose(`Waiting for global selector (${getConfig().globalSelector}) on: ${targetUrl}, timeout=${getConfig().globalSelectorTimeoutMs}ms`);
+    await page.waitForSelector(getConfig().globalSelector, { timeout: getConfig().globalSelectorTimeoutMs });
 
-        for (const action of pageConfig.actions) {
-            logVerbose(`Action '${action.name}' on '${pageConfig.path}'`);
-            switch (action.name) {
-                case 'click':
-                    await page.$eval(action.value as ClickActionValueType, el => (el as HTMLElement).click())
-                    logVerbose(`Clicked on element: ${action.value}`);
-                    break;
+    for (const action of pageConfig.actions) {
+        logVerbose(`Action '${action.name}' on '${pageConfig.path}'`);
+        switch (action.name) {
+            case 'click':
+                await page.$eval(action.value as ClickActionValueType, el => (el as HTMLElement).click())
+                logVerbose(`Clicked on element: ${action.value}`);
+                break;
 
-                case 'wait':
-                    const value = action.value;
-                    if (isTimeWait(value as WaitActionValueType)) {
-                        await waitForTimeout(value as TimeMillisValueType);
-                        logVerbose(`Waited ${value}ms`);
-                    } else if (isSelectorWait(value as WaitActionValueType)) {
-                        await page.waitForSelector(value as CssSelectorType, { timeout: getConfig().globalSelectorTimeoutMs });
-                        logVerbose(`Waited for element: ${value}`);
-                    }
-                    break;
+            case 'wait':
+                const value = action.value;
+                if (isTimeWait(value as WaitActionValueType)) {
+                    await waitForTimeout(value as TimeMillisValueType);
+                    logVerbose(`Waited ${value}ms`);
+                } else if (isSelectorWait(value as WaitActionValueType)) {
+                    await page.waitForSelector(value as CssSelectorType, { timeout: getConfig().globalSelectorTimeoutMs });
+                    logVerbose(`Waited for element: ${value}`);
+                }
+                break;
 
-                case 'type':
-                    const { selector, what } = action.value as TypeActionValueType;
-                    await page.type(selector, what);
-                    logVerbose(`Typed '${what}' into: ${selector}`);
-                    break;
+            case 'type':
+                const { selector, what } = action.value as TypeActionValueType;
+                await page.type(selector, what);
+                logVerbose(`Typed '${what}' into: ${selector}`);
+                break;
 
-                case 'screenshot':
-                    const screenshotId = action.value as ScreenshotActionValueType;
-                    const screenshotDiff = await processScreenshot(page, `${pageConfig.path}_${screenshotId}`);
-                    if (typeof screenshotDiff === 'number' && (maxDifferencePct === undefined || screenshotDiff > maxDifferencePct)) {
-                        maxDifferencePct = screenshotDiff;
-                    }
-                    logVerbose(`Screenshot saved to: ${action.value}`);
-                    break;
+            case 'screenshot':
+                const screenshotId = action.value as ScreenshotActionValueType;
+                const screenshotDiff = await processScreenshot(page, `${pageConfig.path}_${screenshotId}`);
+                if (typeof screenshotDiff === 'number' && (maxDifferencePct === undefined || screenshotDiff > maxDifferencePct)) {
+                    maxDifferencePct = screenshotDiff;
+                }
+                logVerbose(`Screenshot saved to: ${action.value}`);
+                break;
 
-                default:
-                    console.error(`Unknown action: ${action.name}`);
-            }
+            default:
+                console.error(`Unknown action: ${action.name}`);
         }
-        return maxDifferencePct;
-    } finally {
-        returnBrowserToPool(browser);
     }
+        
+    return maxDifferencePct;
 }
     
 export const processScreenshot = async (page: Page, fileName: string): Promise<number | undefined> => {

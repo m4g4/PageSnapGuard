@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.5.0] - 2026-05-05
+
+### Added
+- Configurable `captureFailedPage` and `failedScreenshotDir` to capture screenshots on failures.
+
 ## [2.4.0] - 2026-05-04
 
 ### Added

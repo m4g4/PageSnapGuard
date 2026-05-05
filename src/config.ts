@@ -29,15 +29,22 @@ const defaultConfig: Partial<ConfigType> = ({
     saveDiffs: 'changed',
     retryFailedPages: 3,
     failedSleepTimeMs: 0,
-    pageTimeoutMs: 300000
+    pageTimeoutMs: 300000,
+    captureFailedPage: false,
+    failedScreenshotDir: './screenshots/failed/'
 })
 
 export function prepareConfig(cfg: ConfigType): ConfigType {
-    return {
+    const mergedConfig = {
         ...defaultConfig,
-        ...cfg,
-        baselineDir: path.resolve(cfg.baselineDir),
-        screenshotDir: path.resolve(cfg.screenshotDir),
-        diffDir: path.resolve(cfg.diffDir)
+        ...cfg
+    };
+
+    return {
+        ...mergedConfig,
+        baselineDir: path.resolve(mergedConfig.baselineDir),
+        screenshotDir: path.resolve(mergedConfig.screenshotDir),
+        diffDir: path.resolve(mergedConfig.diffDir),
+        failedScreenshotDir: path.resolve(mergedConfig.failedScreenshotDir ?? './screenshots/failed/')
     }
 }

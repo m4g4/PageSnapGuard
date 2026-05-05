@@ -21,6 +21,8 @@
     "retryFailedPages": 3,
     "failedSleepTimeMs": 0,
     "browserPoolCount": 3,
+    "captureFailedPage": false,
+    "failedScreenshotDir": "./screenshots/failed/",
     "viewPort": { "width": 1280, "height": 840 },
     "pages": [
       {
