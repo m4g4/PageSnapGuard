@@ -174,6 +174,7 @@ function prepareOutputDirectories() {
     if (failedPages.length > 0) {
         console.error(`PageSnapGuard finished with errors.`);
         process.exitCode = 1;
+        return;
     }
 
     console.info('PageSnapGuard finished successfully!');
