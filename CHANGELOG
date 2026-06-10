@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.0] - 2026-06-10
+
+### Added
+- Browser console log capture on every page (`console.*`, `pageerror` events).
+- Failed page HTML dump (`.html`) alongside existing screenshot on failure.
+- Failed page browser console log dump (`.log`) on failure.
+- `enrichActionError` helper that attaches page URL, title, and last 20 console logs to action failure errors.
+
+### Changed
+- `wait` and `click` action failures now include enriched debug context (URL, title, console logs).
+- `takeFailedPageScreenshot` refactored into focused helpers: `takeFailedPageScreenshot`, `saveFailedPageHtml`, `saveBrowserLogs`.
+- Verbose logging enabled by default in config.
+
 ## [2.5.0] - 2026-05-05
 
 ### Added

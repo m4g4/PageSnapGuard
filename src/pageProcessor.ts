@@ -7,6 +7,8 @@ import { getConfig } from './config.js';
 import { url } from './utils/url.js';
 import { waitForTimeout, withTimeout } from './utils/utils.js';
 
+const pageConsoleLogs = new WeakMap<Page, string[]>();
+
 export type PageUrlType = string | 'url';
 
 export type PageProcessResult = {
@@ -162,26 +164,61 @@ const toErrorMessage = (error: unknown): string => {
     return String(error);
 };
 
-const takeFailedPageScreenshot = async (page: Page, pageUrl: PageUrlType): Promise<void> => {
-    try {
-        const safePageUrl = String(pageUrl)
-            .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
-            .replace(/\s+/g, '_')
-            .substring(0, 100);
-        
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const fileName = `failed_${safePageUrl}_${timestamp}`;
-        const failedScreenshotDir = getConfig().failedScreenshotDir ?? './screenshots/failed/';
-        const filePath = path.join(failedScreenshotDir, `${fileName}.png`);
+const getSanitizedPageUrl = (pageUrl: PageUrlType): string => {
+    return String(pageUrl)
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+        .replace(/\s+/g, '_')
+        .substring(0, 100);
+};
 
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        await page.screenshot({ path: filePath, fullPage: true });
-        
-        logVerbose(`Failed page screenshot saved to: ${filePath}`);
-    } catch (error) {
-        logVerbose(`Error taking failed page screenshot: ${toErrorMessage(error)}`);
-        throw error;
-    }
+const getFailedFileName = (pageUrl: PageUrlType): string => {
+    const safePageUrl = getSanitizedPageUrl(pageUrl);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return `failed_${safePageUrl}_${timestamp}`;
+};
+
+const saveBrowserLogs = (page: Page, fileName: string): void => {
+    const logs = pageConsoleLogs.get(page);
+    if (!logs || logs.length === 0) return;
+
+    const failedDir = getConfig().failedScreenshotDir ?? './screenshots/failed/';
+    const logPath = path.join(failedDir, `${fileName}.log`);
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.writeFileSync(logPath, logs.join('\n'), 'utf-8');
+    logVerbose(`Browser console logs saved to: ${logPath}`);
+};
+
+const saveFailedPageHtml = async (page: Page, fileName: string): Promise<void> => {
+    const failedDir = getConfig().failedScreenshotDir ?? './screenshots/failed/';
+    const htmlPath = path.join(failedDir, `${fileName}.html`);
+    fs.mkdirSync(path.dirname(htmlPath), { recursive: true });
+    const pageHtml = await page.content().catch(() => '<error reading page content>');
+    fs.writeFileSync(htmlPath, pageHtml, 'utf-8');
+    logVerbose(`Failed page HTML saved to: ${htmlPath}`);
+};
+
+const takeFailedPageScreenshot = async (page: Page, pageUrl: PageUrlType): Promise<string> => {
+    const fileName = getFailedFileName(pageUrl);
+    const failedDir = getConfig().failedScreenshotDir ?? './screenshots/failed/';
+    const pngPath = path.join(failedDir, `${fileName}.png`);
+
+    fs.mkdirSync(path.dirname(pngPath), { recursive: true });
+    await page.screenshot({ path: pngPath, fullPage: true });
+    logVerbose(`Failed page screenshot saved to: ${pngPath}`);
+
+    return fileName;
+};
+
+const enrichActionError = async (page: Page, actionName: string, actionValue: string, originalError: unknown): Promise<Error> => {
+    const pageTitle = await page.title().catch(() => '?');
+    const pageUrl = page.url();
+    const logs = pageConsoleLogs.get(page) ?? [];
+    const lastLogs = logs.slice(-20).join('\n');
+    return new Error(
+        `Action '${actionName}' failed for '${actionValue}'. ` +
+        `Page URL: ${pageUrl}, Title: "${pageTitle}". ` +
+        `Browser console logs (last ${Math.min(20, logs.length)}):\n${lastLogs}`
+    );
 };
 
 const processPageSafely = async (config: PageConfigurationType, index: number, total: number): Promise<PageProcessResult> => {
@@ -199,6 +236,14 @@ const processPageSafely = async (config: PageConfigurationType, index: number, t
 
             try {
                 page = await browser.newPage();
+                const logs: string[] = [];
+                pageConsoleLogs.set(page, logs);
+                page.on('console', msg => {
+                    logs.push(`[${msg.type()}] ${msg.text()}`);
+                });
+                page.on('pageerror', err => {
+                    logs.push(`[pageerror] ${err.message}`);
+                });
                 let differencePct: number | undefined;
                 const pageTimeoutMs = getConfig().pageTimeoutMs ?? 0;
                 if (isUrlPathType(config)) {
@@ -238,13 +283,18 @@ const processPageSafely = async (config: PageConfigurationType, index: number, t
 
                 logVerbose(`Page failed: ${pageUrl} - ${errorMessage}`);
                 const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
-                console.info(`Failed page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
+                console.error(`Failed page ${pageLabel}: ${pageUrl} in ${elapsedSec}s`);
+                console.error(`  Error: ${errorMessage}`);
                 
                 if (getConfig().captureFailedPage && page) {
                     try {
-                        await takeFailedPageScreenshot(page, pageUrl);
+                        const fileName = await takeFailedPageScreenshot(page, pageUrl);
+                        await saveFailedPageHtml(page, fileName);
+                        saveBrowserLogs(page, fileName);
+                        const failedDir = getConfig().failedScreenshotDir ?? './screenshots/failed/';
+                        console.error(`  Debug artifacts saved to: ${path.resolve(failedDir)}`);
                     } catch (screenshotError) {
-                        logVerbose(`Failed to take screenshot of failed page: ${toErrorMessage(screenshotError)}`);
+                        logVerbose(`Failed to capture debug artifacts for failed page: ${toErrorMessage(screenshotError)}`);
                     }
                 }
 
@@ -357,8 +407,12 @@ export const processDynamicPage = async (page: Page, pageConfig: DynamicPageConf
         logVerbose(`Action '${action.name}' on '${pageConfig.path}'`);
         switch (action.name) {
             case 'click':
-                await page.$eval(action.value as ClickActionValueType, el => (el as HTMLElement).click())
-                logVerbose(`Clicked on element: ${action.value}`);
+                try {
+                    await page.$eval(action.value as ClickActionValueType, el => (el as HTMLElement).click());
+                    logVerbose(`Clicked on element: ${action.value}`);
+                } catch (clickError) {
+                    throw await enrichActionError(page, 'click', action.value as string, clickError);
+                }
                 break;
 
             case 'wait':
@@ -367,8 +421,12 @@ export const processDynamicPage = async (page: Page, pageConfig: DynamicPageConf
                     await waitForTimeout(value as TimeMillisValueType);
                     logVerbose(`Waited ${value}ms`);
                 } else if (isSelectorWait(value as WaitActionValueType)) {
-                    await page.waitForSelector(value as CssSelectorType, { timeout: getConfig().globalSelectorTimeoutMs });
-                    logVerbose(`Waited for element: ${value}`);
+                    try {
+                        await page.waitForSelector(value as CssSelectorType, { timeout: getConfig().globalSelectorTimeoutMs });
+                        logVerbose(`Waited for element: ${value}`);
+                    } catch (waitError) {
+                        throw await enrichActionError(page, 'wait', value as string, waitError);
+                    }
                 }
                 break;
 
