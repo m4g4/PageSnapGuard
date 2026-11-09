@@ -2,7 +2,7 @@ import path from "path";
 import fs from 'fs';
 import { Page } from 'puppeteer';
 import { ConfigType, isCrawlPageConfigType, isUrlPathType, PageConfigurationType } from '../types.js';
-import { isHttpUrl, toAbsoluteHttpUrl, urlToPagePath } from './url.js';
+import { isHttpUrl, normalizeUrlQuery, toAbsoluteHttpUrl, urlToPagePath } from './url.js';
 
 const blockedAssetExtensions = new Set([
     'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico', 'bmp', 'tif', 'tiff', 'avif',
@@ -114,29 +114,47 @@ async function fetchTextWithTimeout(targetUrl: string, timeoutMs: number): Promi
     }
 }
 
-async function crawlPagesFromSeed(baseUrl: URL, seedPath: string, maxPages: number, requestTimeoutMs: number): Promise<string[]> {
+async function crawlPagesFromSeed(baseUrl: URL, seedPath: string, maxPages: number, requestTimeoutMs: number, keepQueryParams: string[], includePatterns: string[], excludePatterns: string[]): Promise<string[]> {
     const seedUrlRaw = isHttpUrl(seedPath) ? seedPath : new URL(seedPath, baseUrl).toString();
     const seedUrl = new URL(seedUrlRaw);
-    const seedPagePath = urlToPagePath(baseUrl, seedUrl.toString());
+    const seedPagePath = urlToPagePath(baseUrl, seedUrl.toString(), keepQueryParams);
     if (seedPagePath === null) {
         return [];
     }
 
-    const visited = new Set<string>();
-    const queue: string[] = [seedUrl.toString()];
-    const discoveredPaths = new Set<string>([seedPagePath]);
+    const normalizeUrl = (rawUrl: string): string => {
+        return normalizeUrlQuery(new URL(rawUrl), keepQueryParams).toString();
+    };
 
-    while (queue.length > 0 && visited.size < maxPages) {
+    const visited = new Set<string>();
+    const queue: string[] = [normalizeUrl(seedUrl.toString())];
+    const discoveredPaths = new Set<string>();
+    const crawlLabel = seedPagePath || 'root';
+    const queryPolicyLabel = keepQueryParams.length > 0
+        ? `keeping query params: ${keepQueryParams.join(', ')}`
+        : 'ignoring URL query parameters';
+
+    const seedMatchesInclude = includePatterns.length === 0 || matchesAnyPattern(seedPagePath, includePatterns);
+    const seedIsExcluded = excludePatterns.length > 0 && matchesAnyPattern(seedPagePath, excludePatterns);
+    if (seedMatchesInclude && !seedIsExcluded) {
+        discoveredPaths.add(seedPagePath);
+    }
+
+    console.info(`Crawling '${crawlLabel}' (max ${maxPages} page(s), ${queryPolicyLabel})...`);
+
+    while (queue.length > 0 && visited.size < maxPages && discoveredPaths.size < maxPages) {
         const currentUrlRaw = queue.shift()!;
-        const currentUrl = new URL(currentUrlRaw);
-        currentUrl.hash = '';
-        const normalizedCurrentUrl = currentUrl.toString();
+        const normalizedCurrentUrl = normalizeUrl(currentUrlRaw);
 
         if (visited.has(normalizedCurrentUrl)) {
             continue;
         }
 
         visited.add(normalizedCurrentUrl);
+
+        if (visited.size === 1 || visited.size % 10 === 0 || visited.size === maxPages) {
+            console.info(`  Crawled ${visited.size}/${maxPages}, discovered ${discoveredPaths.size} page(s)`);
+        }
 
         let htmlContent: string;
         try {
@@ -147,12 +165,16 @@ async function crawlPagesFromSeed(baseUrl: URL, seedPath: string, maxPages: numb
 
         const hrefs = extractHrefValues(htmlContent);
         for (const href of hrefs) {
+            if (discoveredPaths.size >= maxPages) {
+                break;
+            }
+
             const absoluteUrl = toAbsoluteHttpUrl(href, normalizedCurrentUrl);
             if (!absoluteUrl) {
                 continue;
             }
 
-            const pagePath = urlToPagePath(baseUrl, absoluteUrl);
+            const pagePath = urlToPagePath(baseUrl, absoluteUrl, keepQueryParams);
             if (pagePath === null) {
                 continue;
             }
@@ -160,11 +182,16 @@ async function crawlPagesFromSeed(baseUrl: URL, seedPath: string, maxPages: numb
                 continue;
             }
 
-            discoveredPaths.add(pagePath);
+            // Skip excluded paths entirely (do not queue or fetch them).
+            if (excludePatterns.length > 0 && matchesAnyPattern(pagePath, excludePatterns)) {
+                continue;
+            }
 
-            const normalizedAbsolute = new URL(absoluteUrl);
-            normalizedAbsolute.hash = '';
-            const normalizedAbsoluteRaw = normalizedAbsolute.toString();
+            if (includePatterns.length === 0 || matchesAnyPattern(pagePath, includePatterns)) {
+                discoveredPaths.add(pagePath);
+            }
+
+            const normalizedAbsoluteRaw = normalizeUrl(absoluteUrl);
 
             if (!visited.has(normalizedAbsoluteRaw)) {
                 queue.push(normalizedAbsoluteRaw);
@@ -178,18 +205,19 @@ async function crawlPagesFromSeed(baseUrl: URL, seedPath: string, maxPages: numb
 export async function expandCrawlPages(config: ConfigType): Promise<PageConfigurationType[]> {
     const configPages = config.pages ?? [];
     const baseUrl = new URL(config.baseUrl.endsWith('/') ? config.baseUrl : `${config.baseUrl}/`);
-    const crawlMaxPages = config.crawlMaxPages ?? 500;
+    const crawlMaxPages = Math.max(1, config.crawlMaxPages ?? 500);
     const crawlRequestTimeoutMs = config.crawlRequestTimeoutMs ?? 15000;
 
     const expandedPages: PageConfigurationType[] = [];
     const existingPathPages = new Set<string>();
+    const globalKeepQueryParams = config.keepQueryParams ?? [];
 
     for (const page of configPages) {
         if (!isCrawlPageConfigType(page)) {
             expandedPages.push(page);
 
             if (isUrlPathType(page)) {
-                const normalizedPath = isHttpUrl(page) ? urlToPagePath(baseUrl, page) ?? page : page;
+                const normalizedPath = isHttpUrl(page) ? urlToPagePath(baseUrl, page, globalKeepQueryParams) ?? page : page;
                 existingPathPages.add(normalizedPath);
             } else {
                 existingPathPages.add(page.path);
@@ -198,10 +226,11 @@ export async function expandCrawlPages(config: ConfigType): Promise<PageConfigur
             continue;
         }
 
-        const crawledPages = await crawlPagesFromSeed(baseUrl, page.path, crawlMaxPages, crawlRequestTimeoutMs);
-        console.info(`Crawl loaded from '${page.path}': ${crawledPages.length} page(s)`);
+        const keepQueryParams = page.keepQueryParams ?? globalKeepQueryParams;
         const includePatterns = toPatternList(page.includePathPattern);
         const excludePatterns = toPatternList(page.excludePathPattern);
+        const crawledPages = await crawlPagesFromSeed(baseUrl, page.path, crawlMaxPages, crawlRequestTimeoutMs, keepQueryParams, includePatterns, excludePatterns);
+        console.info(`Crawl loaded from '${page.path}': ${crawledPages.length} page(s)`);
 
         for (const crawledPage of crawledPages) {
             if (includePatterns.length > 0 && !matchesAnyPattern(crawledPage, includePatterns)) {
@@ -234,7 +263,7 @@ function matchesAnyPattern(value: string, patterns: string[]): boolean {
 }
 
 function globMatch(value: string, pattern: string): boolean {
-    const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regexPattern = `^${escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.')}$`;
     return new RegExp(regexPattern).test(value);
 }

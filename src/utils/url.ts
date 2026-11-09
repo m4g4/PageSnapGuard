@@ -23,7 +23,33 @@ function toAbsoluteHttpUrl(reference: string, currentUrl: string): string | null
     }
 }
 
-function urlToPagePath(baseUrl: URL, pageUrlRaw: string): string | null {
+/**
+ * Normalizes a URL for crawl uniqueness. By default every query parameter is
+ * dropped so that `?a=1` and `?b=2` resolve to the same page. Params listed in
+ * `keepQueryParams` are preserved because they represent distinct content
+ * (e.g. pagination or product ids).
+ */
+function normalizeUrlQuery(pageUrl: URL, keepQueryParams: string[] = []): URL {
+    const normalized = new URL(pageUrl.toString());
+    normalized.hash = '';
+
+    if (keepQueryParams.length === 0) {
+        normalized.search = '';
+        return normalized;
+    }
+
+    const keptParams = new URLSearchParams();
+    for (const [key, value] of normalized.searchParams) {
+        if (keepQueryParams.includes(key)) {
+            keptParams.append(key, value);
+        }
+    }
+
+    normalized.search = keptParams.toString();
+    return normalized;
+}
+
+function urlToPagePath(baseUrl: URL, pageUrlRaw: string, keepQueryParams: string[] = []): string | null {
     let pageUrl: URL;
     try {
         pageUrl = new URL(pageUrlRaw);
@@ -44,7 +70,8 @@ function urlToPagePath(baseUrl: URL, pageUrlRaw: string): string | null {
 
     const relativePath = currentPath === baseUrl.pathname ? '' : currentPath.slice(basePath.length);
     const normalizedRelativePath = relativePath.replace(/\/+$/, '');
-    return `${normalizedRelativePath}${pageUrl.search}`;
+    const normalizedUrl = normalizeUrlQuery(pageUrl, keepQueryParams);
+    return `${normalizedRelativePath}${normalizedUrl.search}`;
 }
 
-export { isHttpUrl, toAbsoluteHttpUrl, url, urlToPagePath };
+export { isHttpUrl, normalizeUrlQuery, toAbsoluteHttpUrl, url, urlToPagePath };

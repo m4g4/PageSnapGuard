@@ -200,9 +200,12 @@ Here's an example of how to set up a sequence of actions in the configuration fi
 - Crawler follows only links under your configured `baseUrl`.
 - `"crawlMaxPages"`: maximum pages discovered per crawl seed (default `500`).
 - `"crawlRequestTimeoutMs"`: timeout per crawled page request (default `15000`).
+- Query parameters are ignored by default, so `?a=1` and `?b=2` are treated as the same page.
+- `"keepQueryParams"`: array of query parameter names that should remain part of the page identity (for example `["page", "id"]`). Can be set globally or per crawl entry; per-crawl takes precedence.
 - Crawl entries in `pages` can optionally define:
 - `"includePathPattern"`: string or array of glob patterns to include when expanding that crawl seed.
-- `"excludePathPattern"`: string or array of glob patterns to exclude for that crawl seed.
+- `"excludePathPattern"`: string or array of glob patterns to exclude for that crawl seed. Excluded URLs are not fetched during crawling.
+- These are glob patterns, not regular expressions. Use an array for multiple patterns, e.g. `"excludePathPattern": ["tag/*", "product/*"]`.
 - Glob patterns support `*` (any characters) and `?` (single character). Examples: `"blog/*"`, `"docs/??/intro"`, `"*utm=*"`
 
 ### Baseline Update

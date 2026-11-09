@@ -134,13 +134,20 @@ export const returnBrowserToPool = (browser: Browser) => {
     }
 }
 
-export const closeBrowsers = () => {
-    if (browserPool.length !== launchedBrowserCount)
-        throw new Error(`Cannot close working browsers! Free browser count: ${browserPool.length}, Launched browser count: ${launchedBrowserCount}`);
+export const closeBrowsers = async (): Promise<void> => {
+    const browsers = browserPool.splice(0, browserPool.length);
+    logVerbose(`Closing ${browsers.length} browser instance(s).`);
 
-    logVerbose(`Closing ${browserPool.length} browser instance(s).`);
-    browserPool.forEach(b => b.close());
-} 
+    await Promise.all(browsers.map(async (browser) => {
+        try {
+            await browser.close();
+        } catch (error) {
+            logVerbose(`Failed to close browser: ${toErrorMessage(error)}`);
+        }
+    }));
+
+    launchedBrowserCount = 0;
+}
 
 const toPageLabel = (config: PageConfigurationType): PageUrlType => {
     if (isUrlPathType(config)) {

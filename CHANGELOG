@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.7.0] - 2026-11-09
+
+### Added
+- `keepQueryParams` config option (global and per-crawl) to preserve specific query parameters. All other query parameters are ignored by default when crawling, so `?a=1` and `?b=2` are treated as the same page.
+- Crawl progress logging (fetched/discovered counts) so long crawls no longer appear frozen.
+
+### Changed
+- Screenshots are now captured with Puppeteer's native full-page mode instead of scrolling and stitching viewport segments. This removes scroll-position drift that shifted text between runs.
+- Smooth scrolling is disabled during capture, and lazy content is loaded with a bounded scroll pass before the screenshot.
+- `crawlMaxPages` now caps discovered pages. Previously only fetched pages were capped, so the number of pages to screenshot could far exceed the configured limit.
+- `excludePathPattern` now skips fetching excluded URLs during crawling instead of only filtering the final page list.
+- `closeBrowsers` now awaits browser shutdown and no longer throws when the browser pool count is inconsistent, allowing the process to exit cleanly.
+
+### Fixed
+- `includePathPattern` and `excludePathPattern` glob matching now handles `*` and `?` correctly. Previously `tag/*` was compiled to an invalid regex and never matched `tag/foo`.
+- Screenshot comparison now reports differences when image dimensions differ instead of returning `0%`.
+- Removed a potential hang caused by waiting for scroll settling via `requestAnimationFrame`, which Chrome throttles when the browser window is occluded or backgrounded.
+
 ## [2.6.0] - 2026-06-10
 
 ### Added

@@ -85,7 +85,7 @@ function prepareOutputDirectories() {
         console.error("PageSnapGuard error:", error);
     } finally {
         try {
-            closeBrowsers();
+            await closeBrowsers();
         } catch (error) {
             console.error("Failed closing browsers:", error);
         }

@@ -40,6 +40,7 @@
       {
         "path": "",
         "crawl": true,
+        "keepQueryParams": ["page", "id"],
         "includePathPattern": "contact/*",
         "excludePathPattern": "contact/version/*"
       }

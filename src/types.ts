@@ -14,6 +14,7 @@ export type ConfigType = {
     globalSelectorTimeoutMs?: number,
     crawlMaxPages?: number,
     crawlRequestTimeoutMs?: number,
+    keepQueryParams?: string[],
     headless: boolean,
     baseUrl: string,
     globalSelector: string,
@@ -49,7 +50,8 @@ export type CrawlPageConfigType = {
     name?: string,
     crawl: boolean,
     includePathPattern?: string | string[],
-    excludePathPattern?: string | string[]
+    excludePathPattern?: string | string[],
+    keepQueryParams?: string[]
 }
 
 export type PageConfigurationType  = DynamicPageConfigType | CrawlPageConfigType | UrlPathType;
